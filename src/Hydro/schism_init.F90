@@ -46,6 +46,11 @@
       USE eclight
 #endif
 
+!L3
+#ifdef USE_GEN
+     USE grid, only: iYrS,iMonS,iDayS,iHrS,iMinS,iSecS
+#endif
+
 #ifdef USE_ICM
       use icm_mod, only : ntrs_icm,itrs_icm,nout_icm,nout_sav,nout_veg,nout_sed,nout_ba,name_icm,iSilica,iZB,iPh, &
                     & iCBP,isav_icm,iveg_icm,ised_icm,iBA_icm,sht,sleaf,sstem,sroot,vht,vtleaf,vtstem,vtroot, & 
@@ -349,6 +354,19 @@
 !      call get_param('param.in','gen_wsett',2,itmp,gen_wsett,stringvalue)
       tr_mname(3)='GEN'
 #endif
+
+!L3
+#ifdef USE_GEN
+       if(myrank==0) write(16,*) 'Initialize CGEM: in schism_init'
+!      call get_param('param.in','ntracer_gen',1,ntrs(3),tmp,stringvalue)
+      ntrs(3)=ntracer_gen
+      if(ntrs(3)<=0) call parallel_abort('INIT: ntrs(3)<=0')
+      !settling vel
+!      call get_param('param.in','gen_wsett',2,itmp,gen_wsett,stringvalue)
+      tr_mname(3)='GEN'
+       if(myrank==0) write(16,*) 'In schism_init, gen_wsett=',gen_wsett
+#endif
+
 #ifdef USE_AGE
 !      call get_param('param.in','ntracer_age',1,ntrs(4),tmp,stringvalue)
       ntrs(4)=ntracer_age
@@ -833,6 +851,18 @@
       minutes=0 !sim_minute
       seconds=0 !sim_second
 #endif
+
+!L3
+#ifdef USE_GEN
+!iYrS,iMonS,iDayS,iHrS,iMinS,iSecS
+      iYrS = start_year
+      iMonS=start_month
+      iDayS=start_day
+      iHrS=start_hour
+      iMinS=0 !sim_minute
+      iSecS=0 !sim_second
+#endif
+
      
 !...  Transport method for all tracers including T,S
 !     1: upwind; 2: TVD (explicit); 3: TVD (implicit vertical); 4: WENO (implicit vertical)
@@ -1443,6 +1473,17 @@
         allocate(xlon_gb(np_global),ylat_gb(np_global),stat=istat)
         if(istat/=0) call parallel_abort('INIT: alloc xlon_gb failure')
       endif !nws
+
+!L3
+#ifdef USE_GEN
+!Now it has nvrt, you can initialize arrays
+      if(myrank==0) write(16,*) 'Initialize CGEM: nvrt=',nvrt
+      call grid_setup(nvrt,start_year)
+      call cgem_setup(ntrs(3))
+      !if(myrank==0) write(16,*) "After cgem_setup"
+
+#endif
+
 
 #ifdef USE_DVD
      allocate(rkai_num(ntrs(12),nvrt,ne),stat=istat) 
@@ -4643,7 +4684,7 @@
 #ifdef USE_GEN
       !for generic use by users
       !user-defined tracer part
-      if(myrank==0) write(16,*)'Generic tracer transport model evoked'
+      if(myrank==0) write(16,*)'CGEM: Generic tracer transport model evoked'
 #endif
 
 #ifdef USE_AGE

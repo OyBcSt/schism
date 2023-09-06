@@ -80,7 +80,7 @@ module schism_glbl
                       a2_cm03,schk,schpsi
 
   integer,parameter :: natrm=12 !# of _available_ tracer models at the moment (including T,S)
-  integer,parameter :: mntracers=30 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
+  integer,parameter :: mntracers=32 !max # of tracers, used only for dimensioning btrack arrays. Must >=ntracers
 
   !Parameters from param.nml
   integer,save :: ipre,ipre2,indvel,imm,ihot,ics,iwbl,iharind,nws,iwindoff, &

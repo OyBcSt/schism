@@ -7377,46 +7377,10 @@
         endif !heat exchange
 
 #ifdef USE_GEN
-!       user-defined tracer part
-!       define bdy_frc, flx_sf, flx_bt
-!       bdy_frc(,kbe(i)+1:nvrt,1:nea): body force at prism center Q_{i,k} (for all wet elements i);
-!                                      has a dimension of [C]/s, where [C] is dimension of the tracer.
-!                                      Note that this is in addition to source/sinks specified with if_source
-!                                      option.
-!       flx_sf(,1:nea): surface b.c. \kappa*dC/dz = flx_sf (at element center)
-!       flx_bt(,1:nea): bottom b.c.
-!$OMP   single
-        itmp1=irange_tr(1,3)
-        itmp2=irange_tr(2,3)
-!$OMP   end single
-
-!       I'm showing an example of adding swimming velocity as body force below
-!       IMPORTANT: if you check conservation, make sure you take into account
-!       b.c. and body force. The example below sets velocity to 0 at surface and
-!       bottom in order to conserve mass (with no-flux b.c. there)
-!$OMP   do
-        do i=1,nea
-          if(idry_e(i)==1) cycle
-
-          !Element wet
-          flx_sf(itmp1:itmp2,i)=0.d0
-          flx_bt(itmp1:itmp2,i)=0.d0
-          bdy_frc(itmp1:itmp2,:,i)=0.d0
-          !settling vel in internal prisms (positive downward)
-          wsett(itmp1:itmp2,:,i)=gen_wsett !*sin(2*pi*time/10/86400)
-!          do k=kbe(i)+1,nvrt !all prisms along vertical
-!            do m=itmp1,itmp2 !tracer
-!              tmp=0 !init bdy_frc
-!              !Use upwind prism for concentration
-!              if(k>kbe(i)+1) tmp=tmp-wwint*tr_el(m,k,i)/(ze(k,i)-ze(k-1,i))
-!              if(k<nvrt) tmp=tmp+wwint*tr_el(m,k+1,i)/(ze(k,i)-ze(k-1,i))
-!            
-!              bdy_frc(m,k,i)=tmp
-!            enddo !m
-!          enddo !k
-        enddo !i
-!$OMP   end do
-!       end user-defined tracer part
+!        if(myrank==0) write(16,*) "Before Run CGEM"
+!        if(myrank==0) write(16,*) 'Entering cgem model...'
+!        if(myrank==0) write(16,*) 'ntrs(3)=',ntrs(3)
+        call cgem_run(it,myrank)
 #endif /*USE_GEN*/
 
 #ifdef USE_AGE
