@@ -1,6 +1,6 @@
 module cgem_growth
 
-use cgem, only: nospA,nospZ,km,umax,QminN,QmaxN,QminP,QmaxP,nfQs,   &
+use cgem, only: nospA,nospZ,writecsv,km,umax,QminN,QmaxN,QminP,QmaxP,nfQs,   &
   & respg,respb,alphad,betad,Tref,KTg1,KTg2,Ea,KQn,KQp,KSi,Qc, &
   & which_growth,which_photosynthesis,which_quota,which_temperature,     &
   & which_uptake,CChla
@@ -11,12 +11,13 @@ contains
 
 ! ------------------------------------------------------------------------
 subroutine calc_Agrow( E, T_k, Qn, Qp, Si, A_k, Agrow_k, &
-  &              uA_k, Aresp_k, uN_k, uP_k, uE_k, uSi_k )       
+  &              uA_k, Aresp_k, uN_k, uP_k, uE_k, uSi_k, inea )       
 ! ------------------------------------------------------------------------
 ! Call subroutine calc_Agrow to execute the desired phytoplankton 
 ! growth model to calculate the 1D array (water column) Agrow_k 
 !-----------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ---------------------
+  integer, intent(in) :: inea !Grid number, for writing
   real,intent(in)  ::  E(km)           ! Irradiance (quanta/cm2/sec) 
                                        !   at middle of layer k
   real,intent(in)  ::  T_k(km)         ! Water temperature in Celsius
@@ -105,9 +106,13 @@ write(6,*) "In calc_Agrow: Begin calc_Agrow"
     Aresp_k(:,k) =  Agrow_k(:,k) * respg2(:) &  ! Growth dependent respiration (loss of cells), cells/m3/d
       & + Tadj(1:nospA)  * respb(:) * A_k(:,k)  ! Basal respiration (loss of cells) , cells/m3/d
 
+if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
+    write(6001,'(*(g0,:,", "))') Agrow_k(1,k),Aresp_k(1,k),uA_k(k,1),uN_k(k,1),uP_k(k,1),uE_k(k,1),uSi_k(k,1),f_E(1),f_N(1),f_P(1),f_Si(1)
+endif
+
   enddo    
-  
-return 
+
+  return 
 end subroutine calc_Agrow
 !-------------------------------------------------------------
 

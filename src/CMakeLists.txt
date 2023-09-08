@@ -220,6 +220,9 @@ add_module(Ice      USE_ICE   OFF)
 add_module(Multi_ice USE_MICE   OFF)
 add_module(Fabm     USE_FABM  OFF)
 add_module(EcoSim   USE_ECO   OFF)
+#L3 start
+add_module(CGEM     USE_GEN   OFF)
+#L3 end
 add_module(Sediment USE_SED   OFF)
 add_module(Sed2d    USE_SED2D OFF)
 add_module(Hydro    USE_HYDRO ON)

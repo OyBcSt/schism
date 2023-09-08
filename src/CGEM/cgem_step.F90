@@ -115,7 +115,7 @@
     real    :: OM2_CA, OM2_NA, OM2_PA   
     real    :: OM1_CZ, OM1_NZ, OM1_PZ    ! OM from zooplankton
     real    :: OM2_CZ, OM2_NZ, OM2_PZ
-    real    :: sz1 !for stoichiometry x,y,z, z is always normalized to 1 
+    real,parameter    :: sz1 = 1. !for stoichiometry x,y,z, z is always normalized to 1 
 !---------------------------------------------------------------------------
 ! reaction and Nitrification subroutine variables
     real    :: NO3, NH4, O2, DIC, Si, PO4               ! Nutrient input to subroutines
@@ -177,14 +177,26 @@
 
 if(Which_rad.eq.0) call getSolar( iYrS, TC_8, lon, lat, Rad)
 if(Which_wind.eq.0) Wind = 5. 
-
-!write(6,*) "iYrS,TC_8,lon,lat,Rad,Wind",iYrS,TC_8,lon,lat,Rad,Wind
+!write(6,*) "TC_8,Rad,Wind",TC_8,Rad,Wind
 
 #ifdef DEBUG
 write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
 #endif
 
    optNP = ZQn/ZQp    ! Optimal nutrient ratio for zooplankton
+
+   if(istep.eq.1.and.inea.eq.10.and.writecsv.eq.1) then
+     open(unit=6001,file="cgem_growth.csv")
+     open(unit=6101,file="cgem_rates.csv")
+     open(unit=6201,file="cgem.csv")
+     open(unit=6301,file="hydro.csv")
+     open(unit=6401,file="light.csv")
+    write(6001,'(A58)') "Agrow_k,Aresp_k,uA_k,uN_k,uP_k,uE_k,uSi_k,f_E,f_N,f_P,f_Si"
+    write(6101,'(A277)') "ROM1_A,ROM2_A,RO2_A,RNO3_A,RPO4_A,RDIC_A,RNH4_A,RSi_A,RALK_A,RN2_A,ROM1_Z,ROM2_Z,RO2_Z,RNO3_Z,RPO4_Z,RDIC_Z,RNH4_Z,RSi_Z,RALK_Z,RN2_Z,ROM1_R,ROM2_R,RO2_R,RNO3_R,RPO4_R,RDIC_R,RNH4_R,RSi_R,RALK_R,RN2_R,ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC"
+    write(6201,'(A137)') "A,Qn,Qp,Z1,Z2,NO3,NH4,PO4,DIC,O2,OM1_A,OM2_A,OM1_Z,OM2_Z,OM1_R,OM2_R,CDOM,Si,OM1_BC,OM2_BC,Alk,Tr,sx1A,sy1A,sx2A,sy2A,sx1Z,sy1Z,sx2Z,sy2Z"
+    write(6301,'(A22)') "TC_8,rad,wind,sal,temp"
+    write(6401,'(A45)') "ksurf,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,kbot"
+    endif
 
 !    if(istep.ne.1) then
        ! After Advection and VMixing, return to Q's
@@ -196,8 +208,8 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
 
 do k=1,km
   do isp = 1,nf
-    if(ff(k,isp).lt.0.) then 
-      write(6,*) "ff.lt.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff(k,isp)
+    if(ff(k,isp).le.0.) then 
+      write(6,*) "ff.le.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff(k,isp)
       ff(k,isp) = 0.0
     endif
   enddo
@@ -320,8 +332,8 @@ write(6,*) "init loop, ZQp, nea, km",ZQp,k
 !-----------------------------------------------------------------------
 
        if(km .gt. 0) call calc_Agrow( PARdepth_k, T,              &
-                     & Qn_k, Qp_k, ff(k,iSi) , A_k, Agrow_k,   &
-                     & uA_k, Aresp_k, uN_k, uP_k, uE_k, uSi_k )
+                     & Qn_k, Qp_k, ff(:,iSi) , A_k, Agrow_k,   &
+                     & uA_k, Aresp_k, uN_k, uP_k, uE_k, uSi_k, inea )
 
 !------end phytoplankton growth model-------------------------
 
@@ -752,6 +764,7 @@ write(6,*) "In cgem, called mocsy"
 write(6,*) "In cgem, finished reaction A"
 #endif
 
+
 !write(6,*) "In cgem, begin reaction Z"
 !------------------------------------------------------------
 ! Particulate and Dissolved fecal pellets, rate of remineralization
@@ -841,6 +854,15 @@ write(6,*) "In cgem, finished reaction BC"
   RALK  = RALK_A + RALK_Z + RALK_R + RALK_BC - 2.*R_11 ! (mmol-HCO3/m3/d)
   RN2   = RN2_A + RN2_Z + RN2_R + RN2_BC         ! (mmol-N2/m3/d)
 !--------------------------------------------------------------------
+if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
+    write(6101,'(*(g0,:,", "))') &
+    & ROM1_A, ROM2_A, RO2_A, RNO3_A, RPO4_A, RDIC_A, RNH4_A, RSi_A, RALK_A, RN2_A, &
+    & ROM1_Z, ROM2_Z, RO2_Z, RNO3_Z, RPO4_Z, RDIC_Z, RNH4_Z, RSi_Z, RALK_Z, RN2_Z, &
+    & ROM1_R, ROM2_R, RO2_R, RNO3_R, RPO4_R, RDIC_R, RNH4_R, RSi_R, RALK_R, RN2_R, &
+    & ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC
+endif
+
+
 !
 !---------------------------------------------------------------------
 ! Stoichiometry - calculate C:N:P ratios for Remineralization equations
@@ -1094,6 +1116,18 @@ write(6,*) "In cgem, updated ALK"
  
 !Tracer
        ff_new(k,iTr) =  ff(k,iTr)       
+
+if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
+  write(6201,'(*(g0,:,", "))')            ff_new(k,iA(1)), ff_new(k,iQn(1)),ff_new(k,iQp(1)), &
+    & ff_new(k,iZ(1)),  ff_new(k,iZ(2)),  ff_new(k,iNO3),  ff_new(k,iNH4),  ff_new(k,iPO4),   &
+    & ff_new(k,iDIC),   ff_new(k,iO2),    ff_new(k,iOM1_A),ff_new(k,iOM2_A),ff_new(k,iOM1_Z), & 
+    & ff_new(k,iOM2_Z), ff_new(k,iOM1_R), ff_new(k,iOM2_R),ff_new(k,iCDOM), ff_new(k,iSi),    &
+    & ff_new(k,iOM1_BC),ff_new(k,iOM2_BC),ff_new(k,iAlk),  ff_new(k,iTr),   ff_new(k,isx1A),  &
+    & ff_new(k,isy1A),  ff_new(k,isx2A),  ff_new(k,isy2A), ff_new(k,isx1Z), ff_new(k,isy1Z),  &
+    & ff_new(k,isx2Z),  ff_new(k,isy2Z)
+  write(6301,'(*(g0,:,", "))') TC_8,rad,wind,S(k),T(k)
+  write(6401,'(*(g0,:,", "))') PARsurf,PARdepth_k,PARbot
+endif
 
 !--------------------------------------------------------------------
         enddo   ! end of  "do k = 1, km" 

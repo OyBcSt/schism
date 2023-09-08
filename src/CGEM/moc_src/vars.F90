@@ -342,7 +342,7 @@ SUBROUTINE vars(ph, pco2, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD, rhoSW, p,
            PRINT *, 'i, icount, tempis(i), sal,    alk,    dic,    sil,    phos =', &
                      i, icount, tempis(i), sal(i), alk(i), dic(i), sil(i), phos(i)
            PRINT *, 'Execution will stop (Subroutine vars.F90)'
-           !L3 STOP 
+           STOP 
         ENDIF
 !       Zero out any negative salinity, phosphate, silica, dic, and alk
         IF (sal(i) < 0.0) THEN
