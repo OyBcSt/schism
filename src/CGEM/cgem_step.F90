@@ -185,12 +185,12 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
    optNP = ZQn/ZQp    ! Optimal nutrient ratio for zooplankton
 
    if(istep.eq.1.and.inea.eq.10.and.writecsv.eq.1) then
-     open(unit=6001,file="cgem_growth.csv")
-     open(unit=6101,file="cgem_rates.csv")
+     open(unit=6001,file="growth.csv")
+     open(unit=6101,file="rates.csv")
      open(unit=6301,file="hydro.csv")
      open(unit=6401,file="light.csv")
     write(6001,'(A58)') "Agrow,Aresp,uA,uN,uP,uE,uSi,f_E,f_N,f_P,f_Si,Tadj,A,min_S"
-    write(6101,'(A277)') "ROM1_A,ROM2_A,RO2_A,RNO3_A,RPO4_A,RDIC_A,RNH4_A,RSi_A,RALK_A,RN2_A,ROM1_Z,ROM2_Z,RO2_Z,RNO3_Z,RPO4_Z,RDIC_Z,RNH4_Z,RSi_Z,RALK_Z,RN2_Z,ROM1_R,ROM2_R,RO2_R,RNO3_R,RPO4_R,RDIC_R,RNH4_R,RSi_R,RALK_R,RN2_R,ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC"
+    write(6101,'(A314)') "RO2,RNO3,RNH4,RPO4,RDIC,RSi,RALK,RN2,ROM1_A,ROM2_A,RO2_A,RNO3_A,RPO4_A,RDIC_A,RNH4_A,RSi_A,RALK_A,RN2_A,ROM1_Z,ROM2_Z,RO2_Z,RNO3_Z,RPO4_Z,RDIC_Z,RNH4_Z,RSi_Z,RALK_Z,RN2_Z,ROM1_R,ROM2_R,RO2_R,RNO3_R,RPO4_R,RDIC_R,RNH4_R,RSi_R,RALK_R,RN2_R,ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC"
     write(6301,'(A22)') "TC_8,rad,wind,sal,temp"
     write(6401,'(A45)') "ksurf,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,kbot"
     endif
@@ -733,10 +733,11 @@ write(6,*) "In cgem, finished reaction BC"
 !--------------------------------------------------------------------
 if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
     write(6101,'(*(g0,:,", "))') &
-    & ROM1_A, ROM2_A, RO2_A, RNO3_A, RPO4_A, RDIC_A, RNH4_A, RSi_A, RALK_A, RN2_A, &
-    & ROM1_Z, ROM2_Z, RO2_Z, RNO3_Z, RPO4_Z, RDIC_Z, RNH4_Z, RSi_Z, RALK_Z, RN2_Z, &
-    & ROM1_R, ROM2_R, RO2_R, RNO3_R, RPO4_R, RDIC_R, RNH4_R, RSi_R, RALK_R, RN2_R, &
-    & ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC
+    & RO2(k), RNO3(k), RNH4(k), RPO4(k), RDIC(k),RSi(k),RALK(k),RN2(k), &
+    & ROM1_A(k), ROM2_A(k), RO2_A, RNO3_A, RPO4_A, RDIC_A, RNH4_A, RSi_A, RALK_A, RN2_A, &
+    & ROM1_Z(k), ROM2_Z(k), RO2_Z, RNO3_Z, RPO4_Z, RDIC_Z, RNH4_Z, RSi_Z, RALK_Z, RN2_Z, &
+    & ROM1_R(k), ROM2_R(k), RO2_R, RNO3_R, RPO4_R, RDIC_R, RNH4_R, RSi_R, RALK_R, RN2_R, &
+    & ROM1_BC(k),ROM2_BC(k),RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC
 endif
 
 !
