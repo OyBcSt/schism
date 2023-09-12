@@ -13,13 +13,15 @@ subroutine cgem_run(istep,myrank)
   implicit none
 
   integer, intent(in) :: istep,myrank
-  integer :: itmp1,itmp2,i,ierr,m,im,mm,k,TC_8
+  integer :: itmp1,itmp2,i,m,im,mm,k,TC_8
   real :: cgemdt
   real, parameter :: cv        = 2.77e14 ! multiplicative factor used
                                              ! to convert from watts/m2 
                                              ! to photons/cm2/sec
                                              ! Morel and Smith (1974)
+  external :: cgem_step, cgem_flux
 
+                                             
 !Just say Hi in mirror.out
   if(myrank==0) write(16,*) "In cgem_run: istep,dt=",istep,dt
 

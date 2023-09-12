@@ -10,40 +10,39 @@ implicit none
 contains
 
 ! ------------------------------------------------------------------------
-subroutine calc_Agrow( E, T_k, Qn, Qp, Si, A_k, Agrow_k, &
-  &              uA_k, Aresp_k, uN_k, uP_k, uE_k, uSi_k, inea )       
+subroutine calc_Agrow( E, T, Qn, Qp, Si, A, Agrow, &
+  &              uA, Aresp, uN, uP, uE, uSi, inea )       
 ! ------------------------------------------------------------------------
 ! Call subroutine calc_Agrow to execute the desired phytoplankton 
-! growth model to calculate the 1D array (water column) Agrow_k 
+! growth model to calculate the 1D array (water column) Agrow 
 !-----------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ---------------------
   integer, intent(in) :: inea !Grid number, for writing
   real,intent(in)  ::  E(km)           ! Irradiance (quanta/cm2/sec) 
                                        !   at middle of layer k
-  real,intent(in)  ::  T_k(km)         ! Water temperature in Celsius
-  real,intent(in)  ::  Qn(nospA,km)    ! Phytoplankton Nitrogen Quota (mmol-N/cell)         
-  real,intent(in)  ::  Qp(nospA,km)    ! Phytoplankton Phosphorous Quota (mmol-P/cell)     
+  real,intent(in)  ::  T(km)         ! Water temperature in Celsius
+  real,intent(in)  ::  Qn(km,nospA)    ! Phytoplankton Nitrogen Quota (mmol-N/cell)         
+  real,intent(in)  ::  Qp(km,nospA)    ! Phytoplankton Phosphorous Quota (mmol-P/cell)     
   real,intent(in)  ::  Si(km)          ! Silica (mmol-Si/m3)
-  real,intent(in)  ::  A_k(nospA,km)   ! Number density of phytoplankton group isp 
+  real,intent(in)  ::  A(km,nospA)   ! Number density of phytoplankton group isp 
 ! -- Declare calculated variables being returned ---------------------
-  real,intent(out) ::  Agrow_k(nospA,km)  ! Specific growth rate    
+  real,intent(out) ::  Agrow(km,nospA)  ! Specific growth rate    
                                           !   of phytoplankton group isp
-  real,intent(out) ::  uA_k(km,nospA)     ! Temperature adjusted light factor
+  real,intent(out) ::  uA(km,nospA)     ! Temperature adjusted light factor
                                           !   phytoplankton group isp
-  real,intent(out) ::  Aresp_k(nospA,km)  ! Phytoplankton respiration of group       	
+  real,intent(out) ::  Aresp(km,nospA)  ! Phytoplankton respiration of group       	
                                           !   isp, including dark respiration. 
-  real,intent(out) ::  uN_k(km,nospA)     ! Nitrogen limited growth rate (1/d)
-  real,intent(out) ::  uP_k(km,nospA)     ! Phosphorus limited growth rate (1/d)
-  real,intent(out) ::  uE_k(km,nospA)     ! Light limited growth rate (1/d)
-  real,intent(out) ::  uSi_k(km,nospA)    ! Silica limited growth rate (1/d)
+  real,intent(out) ::  uN(km,nospA)     ! Nitrogen limited growth rate (1/d)
+  real,intent(out) ::  uP(km,nospA)     ! Phosphorus limited growth rate (1/d)
+  real,intent(out) ::  uE(km,nospA)     ! Light limited growth rate (1/d)
+  real,intent(out) ::  uSi(km,nospA)    ! Silica limited growth rate (1/d)
 
 ! -- Local variables --------------------------------------------------------------   
   integer :: k, isp ! loop indices     
-  real,dimension(nospA+nospZ) :: Tadj            ! Temperature adjustment factor, variable and function 
-  real,dimension(nospA)       :: uA              ! Specific growth, 1/d      
-  real,dimension(nospA)       :: f_E             ! Light growth function 
-  real,dimension(nospA)       :: f_N, f_P, f_Si  ! Nutrient growth functions
-  real,dimension(nospA)       :: min_S           ! Limiting substrate values
+  real,dimension(km,nospA+nospZ) :: Tadj            ! Temperature adjustment factor, variable and function 
+  real,dimension(km,nospA)       :: f_E             ! Light growth function 
+  real,dimension(km,nospA)       :: f_N, f_P, f_Si  ! Nutrient growth functions
+  real,dimension(km,nospA)       :: min_S           ! Limiting substrate values
   real,dimension(nospA)       :: respg2          ! Actual respiration coefficient
 !------------------------------------------------------------------------
 
@@ -54,63 +53,64 @@ write(6,*) "In calc_Agrow: Begin calc_Agrow"
 !-------------------------------
 ! Begin growth rate calculations
 !-------------------------------
-
-  do k = 1, km
-
-    call func_T( T_k(k), Tadj ) ! Temperature adjustment
-    call func_S( Qn(:,k), Qp(:,k), Si(k), f_N, f_P, f_Si ) ! Nutrient dependent growth function
+    call func_S( Qn, Qp, Si, f_N, f_P, f_Si ) ! Nutrient dependent growth function
+    call func_T( T, Tadj ) ! Temperature adjustment
     do isp = 1, nospA
-      min_S(isp) = AMIN1( f_N(isp), f_P(isp), f_Si(isp) )
+       min_S(:,isp) = AMIN1( f_N(:,isp), f_P(:,isp), f_Si(:,isp) )
     enddo
-    call func_E( E(k), min_S, f_E ) ! Light growth function
+    call func_E( E, min_S, f_E ) ! Light growth function
 
     !Output variables for netCDF to examine light vs. nutrient limitations 
-    uN_k(k,:)   = f_N(:)  * umax(:) * Tadj(1:nospA) 
-    uP_k(k,:)   = f_P(:)  * umax(:) * Tadj(1:nospA)
-    uE_k(k,:)   = f_E(:)  * umax(:) * Tadj(1:nospA) 
-    uSi_k(k,:)  = f_Si(:) * umax(:) * Tadj(1:nospA)
-
-#ifdef DEBUG
-  if(k.eq.1) write(6,*) "f_E,umax,uE_k", f_E,umax,uE_k(k,:)
-#endif
+    do isp = 1,nospA
+      uN(:,isp)   = f_N(:,isp)  * umax(isp) * Tadj(:,isp) 
+      uP(:,isp)   = f_P(:,isp)  * umax(isp) * Tadj(:,isp)
+      uE(:,isp)   = f_E(:,isp)  * umax(isp) * Tadj(:,isp) 
+      uSi(:,isp)  = f_Si(:,isp) * umax(isp) * Tadj(:,isp)
+    enddo
 
     if(which_growth.eq.1) then
       do isp=1,nospA
-        uA(isp) = umax(isp) * Tadj(isp) * AMIN1(min_S(isp),f_E(isp)) ! Minimum Formulation
+        uA(:,isp) = umax(isp) * Tadj(:,isp) * AMIN1(min_S(:,isp),f_E(:,isp)) ! Minimum Formulation
       enddo
     else if(which_growth.eq.2) then
-      uA(:) = umax(:) * Tadj(1:nospA) * f_E(:) * min_S(:)   ! Product Formulation
+      do isp=1,nospA
+        uA(:,isp) = umax(isp) * Tadj(:,isp) * f_E(:,isp) * min_S(:,isp)   ! Product Formulation
+      enddo
     else if(which_growth.eq.3) then
-      uA(:) = umax(:) * Tadj(1:nospA) * f_E(:) * min_S(:) ! Nutrient dependence is in f_E
+      do isp=1,nospA
+        uA(:,isp) = umax(isp) * Tadj(:,isp) * f_E(:,isp) * min_S(:,isp) ! Nutrient dependence is in f_E
+      enddo
     else !Let default be Minimum Formulation
       do isp=1,nospA
-        uA(isp) = umax(isp) * Tadj(isp) * AMIN1(min_S(isp),f_E(isp)) ! Minimum Formulation
+        uA(:,isp) = umax(isp) * Tadj(:,isp) * AMIN1(min_S(:,isp),f_E(:,isp)) ! Minimum Formulation
       enddo
     endif
 
-    uA_k(k,:)      = uA(:)           ! Save specific growth rate to array for netCDF, 1/d
-    Agrow_k(:,k)   = A_k(:,k)*uA(:)  ! Phytoplankton growth, cells/m3/d
-
-    ! If uA < 0.25d-1, set respiration to zero; Laws and Bannister(1980) 
     do isp=1,nospA
-      if(uA(isp).lt.0.25) then
-        respg2(isp) = 0.
-      else
-        respg2(isp) = respg(isp)
-      endif
+      Agrow(:,isp)   = A(:,isp)*uA(:,isp)  ! Phytoplankton growth, cells/m3/d
     enddo
 
     !-----------------------------------------      
     ! Calculate the total respiration Aresp
     !-----------------------------------------
-    Aresp_k(:,k) =  Agrow_k(:,k) * respg2(:) &  ! Growth dependent respiration (loss of cells), cells/m3/d
-      & + Tadj(1:nospA)  * respb(:) * A_k(:,k)  ! Basal respiration (loss of cells) , cells/m3/d
+    do k=1,km
+      do isp=1,nospA
+      ! If uA < 0.25d-1, set respiration to zero; Laws and Bannister(1980) 
+        if(uA(k,isp).lt.0.25) then
+          respg2(isp) = 0.
+        else
+          respg2(isp) = respg(isp)
+        endif
+        Aresp(k,isp) =  Agrow(k,isp) * respg2(isp) &  ! Growth dependent respiration (loss of cells), cells/m3/d
+          & + Tadj(k,isp)  * respb(isp) * A(k,isp)  ! Basal respiration (loss of cells) , cells/m3/d
+    enddo
+    enddo
 
+k=1
 if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
-    write(6001,'(*(g0,:,", "))') Agrow_k(1,k),Aresp_k(1,k),uA_k(k,1),uN_k(k,1),uP_k(k,1),uE_k(k,1),uSi_k(k,1),f_E(1),f_N(1),f_P(1),f_Si(1)
+    write(6001,'(*(g0,:,", "))') Agrow(k,1),Aresp(k,1),uA(k,1),uN(k,1),uP(k,1),uE(k,1),uSi(k,1),f_E(k,1),f_N(k,1),f_P(k,1),f_Si(k,1),Tadj(k,1),A(k,1),min_S(k,1)
 endif
 
-  enddo    
 
   return 
 end subroutine calc_Agrow
@@ -135,17 +135,24 @@ subroutine func_E( E, min_S, f_E )
 !   betad  =
 !------------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ---------------------
-  real, intent(IN) :: E    ! Irradiance (quanta/cm**2/sec)
-  real, intent(IN),  dimension(nospA) :: min_S ! Function of rate limiting nutrient
+  real, dimension(km), intent(in) :: E    ! Irradiance (quanta/cm**2/sec)
+  real, dimension(km,nospA), intent(in) :: min_S ! Function of rate limiting nutrient
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out),dimension(nospA)  :: f_E   ! Growth rate factor (dimensionless) 
+  real, intent(out),dimension(km,nospA)  :: f_E   ! Growth rate factor (dimensionless) 
+  integer isp
 
   if (which_photosynthesis.eq.1) then         !With photoinhibition 
-    f_E(1:nospA) = ( 1.0 - exp(-alphad(1:nospA) * E) ) * exp(-betad(1:nospA)*E)
+    do isp=1,nospA
+      f_E(:,isp) = ( 1.0 - exp(-alphad(isp) * E(:)) ) * exp(-betad(isp)*E(:))
+    enddo
   else if (which_photosynthesis.eq.2) then    !Without photoinhibition
-    f_E(1:nospA) = ( 1.0 - exp(-alphad(1:nospA) * E) )
+    do isp=1,nospA
+      f_E(:,isp) = ( 1.0 - exp(-alphad(isp) * E(:)) )
+    enddo
   else if (which_photosynthesis.eq.3) then    !Nutrient dependent
-    f_E(1:nospA) = ( 1.0 - exp(-alphad(1:nospA) * E / min_S) )
+    do isp=1,nospA
+      f_E(:,isp) = ( 1.0 - exp(-alphad(isp) * E(:) / min_S(:,isp)) )
+    enddo
   else
     write(6,*) "Error in func_E"
       stop
@@ -176,21 +183,26 @@ subroutine func_Qs( Qn, Qp, f_Qn, f_Qp)
 !   Qmin/max_X - minimum and maximum nutrient cell quota (mmol/cell)
 !------------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ---------------------
-  real, intent(IN), dimension(nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
-  real, intent(IN), dimension(nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
+  real, intent(in), dimension(km,nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
+  real, intent(in), dimension(km,nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out), dimension(nospA) :: f_Qn  ! Function based on N
-  real, intent(out), dimension(nospA) :: f_Qp  ! Function based on P
+  real, intent(out), dimension(km,nospA) :: f_Qn  ! Function based on N
+  real, intent(out), dimension(km,nospA) :: f_Qp  ! Function based on P
+  integer isp
 
   if (which_uptake.eq.1) then !Michaelis-Menten
-    f_Qn(:) = 1. 
-    f_Qp(:) = 1. 
+    f_Qn = 1. 
+    f_Qp = 1. 
   else if (which_uptake.eq.2) then !Geider(1998), Lehman(1975) is nfQs=1
-    f_Qn(:) = ( (QmaxN(:) - Qn(:))/(QmaxN(:) - QminN(:)) ) ** nfQs(:)
-    f_Qp(:) = ( (QmaxP(:) - Qp(:))/(QmaxP(:) - QminP(:)) ) ** nfQs(:)
+    do isp=1,nospA
+      f_Qn(:,isp) = ( (QmaxN(isp) - Qn(:,isp))/(QmaxN(isp) - QminN(isp)) ) ** nfQs(isp)
+      f_Qp(:,isp) = ( (QmaxP(isp) - Qp(:,isp))/(QmaxP(isp) - QminP(isp)) ) ** nfQs(isp)
+    enddo
   else if (which_uptake.eq.3) then !Flynn(2003)
-    f_Qn(:) = QmaxN(:)/Qn(:) 
-    f_Qp(:) = QmaxP(:)/Qp(:)
+    do isp=1,nospA
+      f_Qn(:,isp) = QmaxN(isp)/Qn(:,isp) 
+      f_Qp(:,isp) = QmaxP(isp)/Qp(:,isp)
+    enddo
   else  
     write(6,*) "Error in func_Qs"
     stop
@@ -199,13 +211,10 @@ subroutine func_Qs( Qn, Qp, f_Qn, f_Qp)
 return
 end subroutine func_Qs  
 !------------------------------------------------------------
-
 !------------------------------------------------------------
 subroutine func_S( Qn, Qp, Si, f_N, f_P, f_Si)
 !-- func_S is for a function of substrate 'S' --------------- 
-!  USE cgem_vars, only: nospA,which_quota,QminN,QminP,QmaxN,QmaxP,&
-!      KQn,KQp,KSi
-      
+
 !--------------------------------------------------------------------------
 ! INPUT:  
 !   Qn - Phytoplankton Nitrogen Quota (mmol-N/cell) 
@@ -227,101 +236,115 @@ subroutine func_S( Qn, Qp, Si, f_N, f_P, f_Si)
 !------------------------------------------------------------------------
 
 ! -- Declare input variables coming thru the interface ---------------------
-  real, intent(in), dimension(nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
-  real, intent(in), dimension(nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
-  real, intent(in)                    :: Si    ! Silica concentration in seawater (mmol-Si/m3)
+  real, intent(in), dimension(km,nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
+  real, intent(in), dimension(km,nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
+  real, intent(in), dimension(km)        :: Si    ! Silica concentration in seawater (mmol-Si/m3)
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out), dimension(nospA) :: f_N   ! Function based on N
-  real, intent(out), dimension(nospA) :: f_P   ! Function based on P
-  real, intent(out), dimension(nospA) :: f_Si  ! Function based on Si
+  real, intent(out), dimension(km,nospA) :: f_N   ! Function based on N
+  real, intent(out), dimension(km,nospA) :: f_P   ! Function based on P
+  real, intent(out), dimension(km,nospA) :: f_Si  ! Function based on Si
+! -- local
+  integer :: isp
 
   if (which_quota.eq.1) then !Droop(1968)
-    f_N(:) = ( Qn(:) - QminN(:) ) / Qn(:)
-    f_P(:) = ( Qp(:) - QminP(:) ) / Qp(:)
-    f_Si(:) = Si / ( Si + Ksi(:) ) !Monod        
+    do isp=1,nospA
+      f_N(:,isp)  = ( Qn(:,isp) - QminN(isp) ) / Qn(:,isp)
+      f_P(:,isp)  = ( Qp(:,isp) - QminP(isp) ) / Qp(:,isp)
+      f_Si(:,isp) = Si(:) / ( Si(:) + Ksi(isp) ) !Monod        
+    enddo
   else if (which_quota.eq.2) then !Nyholm(1978)
-    f_N(:) = ( Qn(:) - QminN(:) ) / ( QmaxN(:) - QminN(:) )
-    f_P(:) = ( Qp(:) - QminP(:) ) / ( QmaxP(:) - QminP(:) )
-    f_Si(:) = Si / ( Si + Ksi(:) ) !Monod 
+    do isp=1,nospA
+      f_N(:,isp)  = ( Qn(:,isp) - QminN(isp) ) / ( QmaxN(isp) - QminN(isp) )
+      f_P(:,isp)  = ( Qp(:,isp) - QminP(isp) ) / ( QmaxP(isp) - QminP(isp) )
+      f_Si(:,isp) = Si(:) / ( Si(:) + Ksi(isp) ) !Monod 
+    enddo
   else if (which_quota.eq.3) then !Flynn(2003)
-    f_N(:) = ( 1. + KQn(:) ) * ( Qn(:) - QminN(:) ) /        &
-     &           ( Qn(:) - QminN(:) + KQn(:)*( QmaxN(:) - QminN(:) ) )
-    f_P(:) = ( 1. + KQp(:) ) * ( Qp(:) - QminP(:) ) /        &
-     &           ( Qp(:) - QminP(:) + KQp(:)*( QmaxP(:) - QminP(:) ) )
-    f_Si(:) = Si / ( Si + Ksi(:) ) !Monod 
+    do isp=1,nospA
+      f_N(:,isp)  = ( 1. + KQn(isp) ) * ( Qn(:,isp) - QminN(isp) ) /        &
+       &           ( Qn(:,isp) - QminN(isp) + KQn(isp)*( QmaxN(isp) - QminN(isp) ) )
+      f_P(:,isp)  = ( 1. + KQp(isp) ) * ( Qp(:,isp) - QminP(isp) ) /        &
+       &           ( Qp(:,isp) - QminP(isp) + KQp(isp)*( QmaxP(isp) - QminP(isp) ) )
+      f_Si(:,isp) = Si(:) / ( Si(:) + Ksi(isp) ) !Monod 
+    enddo
   else
     write(6,*) "Error in func_S. which_quota=",which_quota
     stop
   endif
 
 return
-end subroutine func_S  
+end subroutine func_S
 !---------------------------------------------------------------------------
 
 !---------------------------------------------------------------------------
-subroutine func_T( T, Tadj )   
+subroutine func_T( T, Tadj )
 !---------------------------------------------------------------------------
 
 !--------------------------------------------------------------------------
-! INPUT:  
+! INPUT:
 !   T = temperature [degree C]
 !
 ! OUTPUT:
-!   Temperature Adjustment 
-! 
+!   Temperature Adjustment
+!
 ! REFERENCES:
 !
 ! nospA,nospZ,Tref,KTg1,KTg2,which_temperature,Ea
 !------------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ------------------
-  real, intent(in) :: T    ! Temperature (deg C)
+  real, dimension(km), intent(in) :: T    ! Temperature (deg C)
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out), dimension(nospA+nospZ) :: Tadj 
-! -- Local variables ------------------------------------------------------   
+  real, intent(out), dimension(km,nospA+nospZ) :: Tadj
+! -- Local variables ------------------------------------------------------
   real, parameter  :: f0    = 0.1
   real, parameter  :: r     = 0.3
-  real, parameter  :: f1    = 1.0/f0 - 1.0  
-  real, parameter  :: r1    = r*(46.5/18.0) 
+  real, parameter  :: f1    = 1.0/f0 - 1.0
+  real, parameter  :: r1    = r*(46.5/18.0)
   real, parameter  :: k_b    = 8.6173303e-5 !Boltzmann constant in eV/K
-  real             :: denom(nospA+nospZ)
-  real             :: T_in_K,Tref_in_K(nospA+nospZ)
-  integer          :: isp
+  real, dimension(km,nospA+nospZ)           :: denom
+  real, dimension(nospA+nospZ)              :: Tref_in_K
+  integer          :: isp,k
 
 #ifdef DEBUG
 write(6,*) "func_T, nospA, which_temperature",nospA,which_temperature
 #endif
 
-  if (which_temperature.eq.1) then !Sigmoidal 
-    denom(:) = 1.0 + f1*exp(-r1*( T - Tref(:))) 
-    Tadj(:)  = 0.3 *(1.0/denom(:)) + 0.7            
-  else if (which_temperature.eq.2) then !Optimum temperature threshold T (Cerco and Noel, 2004)
+  if (which_temperature.eq.1) then !Sigmoidal
     do isp=1,nospA+nospZ
-      if(T.le.Tref(isp)) then
-        Tadj(isp) = exp( -KTg1(isp) * (T - Tref(isp))**2 )           
-      else
-        Tadj(isp) = exp( -KTg2(isp) * (Tref(isp) - T)**2 )
-      endif
+      denom(:,isp) = 1.0 + f1*exp(-r1*( T(:) - Tref(isp)))
+    enddo
+    do isp=1,nospA+nospZ
+      Tadj(:,isp)  = 0.3 *(1.0/denom(:,isp)) + 0.7
+    enddo
+  else if (which_temperature.eq.2) then !Optimum temperature threshold T (Cerco and Noel, 2004)
+    do k=1,km
+      do isp=1,nospA+nospZ
+        if(T(k).le.Tref(isp)) then
+          Tadj(k,isp) = exp( -KTg1(isp) * (T(k) - Tref(isp))**2 )
+        else
+          Tadj(k,isp) = exp( -KTg2(isp) * (Tref(isp) - T(k))**2 )
+        endif
+      enddo
     enddo
   else if (which_temperature.eq.3) then !Decrease in growth rate at threshold T (Arrhenius form, Geider 1997)
-    T_in_K  = T + 273.15 !Temp. in Kelvin
-    Tref_in_K(:) = Tref(:) + 273.15 !Temp. in Kelvin 
-    Tadj(:) = exp ( -(Ea(:)/k_b) * ( 1./T_in_K - 1./Tref_in_K(:) ) ) 
-  else  
+    Tref_in_K(:) = Tref(:) + 273.15 !Temp. in Kelvin
+    do k=1,km
+      Tadj(k,:) = exp ( -(Ea(:)/k_b) * ( 1./(T(k)+273.15) - 1./Tref_in_K(:) ) )
+    enddo
+  else
     write(6,*) "Error in func_T"
     stop
   endif
- 
-return
-end subroutine func_T  
 
+return
+end subroutine func_T
 
 ! These subroutines contain code for calculating mg chlorophyll-a from phytoplankton abundance.  Cloern is removed, so there is only:
 ! 1. Fixed C:Chla ratio 
 
-function Fixed_CChla(A_k) RESULT(Chla_tot)
+function Fixed_CChla(A) RESULT(Chla_tot)
 
   ! Input parameters
-  real, intent(in) :: A_k(nospA,km)  ! A's number density, cells/m3
+  real, intent(in) :: A(km,nospA)  ! A's number density, cells/m3
   ! Function return value
   real :: Chla_tot(km)
   
@@ -331,7 +354,7 @@ function Fixed_CChla(A_k) RESULT(Chla_tot)
   do k = 1, km 
     Chla_tot(k) = 0.0
     do isp = 1, nospA
-      Chla_tot(k) =  Chla_tot(k) + A_k(isp,k) * Qc(isp) * 12. * (1./CChla(isp)) 
+      Chla_tot(k) =  Chla_tot(k) + A(k,isp) * Qc(isp) * 12. * (1./CChla(isp)) 
     enddo ! isp = 1, nospA
   enddo ! k = 1, km 
 

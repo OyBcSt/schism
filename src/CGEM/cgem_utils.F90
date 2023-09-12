@@ -558,8 +558,6 @@
 #ifdef DEBUG
 write(6,*) "In reaction"
 #endif
-   
-
 !write(6,*) "Reaction: OM1, OM2, O2, NO3,  X1, Y1, Z1, X2, Y2, Z2",myrank,inea,OM1,OM2,O2,NO3,X1,Y1,Z1
 
     ! Use the Q10 relationship to determine the rates.
@@ -575,10 +573,6 @@ write(6,*) "In reaction"
     RQ22 = LOG10( RQ2 ) - FACTOR
     RQ22 = 10.0 ** RQ22
 
-#ifdef DEBUG
-write(6,*) "In reaction, did some LOG10s"
-#endif
-
     ! Lets oxidants determine the rate of organic degradation using
     ! the full Monod relationship.
     ! Calculate the concentration of OMs from Flux.
@@ -591,25 +585,12 @@ write(6,*) "In reaction, did some LOG10s"
     RCT2     = RQ22 * OM2
     R( 1 ) = O2 / ( KO2 + O2 )
     R( 1 ) = MAX( 0.0, R( 1 ) )
-#ifdef DEBUG
-write(6,*) "In reaction, some division by KO2+O2"
-#endif
 
 
     FBNO3 = rnitrate( O2, KstarO2 ) ! Feedback on denitrification by O2.    
 
-#ifdef DEBUG
-write(6,*) "In reaction, Called rnitrate"
-#endif
-
-
     R( 2 ) = NO3 / ( KNO3 + NO3 ) * FBNO3
     R( 2 ) = MAX( 0.0, R( 2 ) )
-
-#ifdef DEBUG
-write(6,*) "In reaction, divide by NO3 terms"
-#endif
-
 
     R11 = RCT1 * R( 1 )
     R12 = RCT1 * R( 2 )
@@ -624,13 +605,6 @@ write(6,*) "In reaction, divide by NO3 terms"
     ! Use J. Lehrter's updated equations, where OM is first converted
     ! to NH3 (instead of converting directly to NO3)
     ! Use the stoichiometry from OM to determine O2 and NO3 use.
-
-#ifdef DEBUG
-write(6,*) "In reaction, using X1,X2:",X1,X2
-write(6,*) "Y1,Y2,Z1,Z2",Y1,Y2,Z1,Z2
-#endif
-
-
     GAM14 = ( 4.0 * X1 + 3.0 * Y1 ) / 5.0 / X1 ! denitrification NO3-/CH20
     GAM24 = ( 4.0 * X2 + 3.0 * Y2 ) / 5.0 / X2 ! denitrification NO3-/CH20
 
