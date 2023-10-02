@@ -15,7 +15,7 @@ integer :: nospA
 integer :: nospZ
 
 !misc
-integer :: skipcgem,checkwindrad,writecsv
+integer :: skipcgem,checkwindrad,writecsv,debug
 real :: eps
 
 !Sinking
@@ -281,7 +281,7 @@ subroutine cgem_dim
   integer           :: istat,iunit
   character(len=1000) :: line
   !http://degenerateconic.com/namelist-error-checking.html
-  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv
+  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug
 
 #ifdef DEBUG
 write(6,*) "Begin cgem_dim"

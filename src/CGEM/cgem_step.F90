@@ -18,13 +18,12 @@
     integer, intent(in)  :: TC_8         ! Model time (seconds from beginning of Jan 1, 2002)
     integer, intent(in)  :: istep     ! Current time step
     integer, intent(in)  :: inea  !grid element for this step
-    integer, intent(in) :: myrank !process number
-    real, intent(in) :: dT
+    integer, intent(in)  :: myrank !process number
+    real, intent(in)     :: dT
 !---------------------------------------------------------------------------------------
 ! Local Variables
 !-----------------------------------------------------
     integer        ::  k, isp, isz ! Loop indicies, isp/isz is for phytoplankton/zooplankton species
-    integer        ::  Is_Day            ! Switch for day/night for phytoplankton nutrient uptake only, Is_Day=0 means night
 !------------------------------------ 
 ! Phytoplankton parameters
 ! Phytoplankton uptake and growth
@@ -38,71 +37,69 @@
     real, dimension(km,nospA) :: uSi   ! Silica limited growth rate (1/d)
     real, dimension(km,nospA) :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
     real, dimension(km,nospA) :: Qp    ! Phytoplankton Phosphorus Quota (mmol-P/cell)
-    real, dimension(km,nospA)    :: f_Qn  ! Quota model for N
-    real, dimension(km,nospA)    :: f_Qp  ! Quota model for P
-    real, dimension(km)    :: vN    ! Phytoplankton uptake rate of Nitrogen (mmol-N/cell/d)
-    real, dimension(km)    :: vP    ! Phytoplankton uptake rate of Phosphorus (mmol-P/cell/d)
-    real, dimension(km)    :: vSi   ! Phytoplankton uptake rate of Silica (mmol-Si/cell/d)
-    real, dimension(km)    :: AupN  ! Total Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
-    real, dimension(km)    :: AupP  ! Total Phytoplankton uptake of Phosphorus (mmol-P/m3/d)
-    real, dimension(km)    :: AupSi ! Total Phytoplankton uptake of Silica (mmol-Si/m3/d)
-    integer, dimension(km) :: RLN   ! Rate Limiting Nutrient of N, P, and Si
+    real, dimension(km,nospA) :: f_Qn  ! Quota model for N
+    real, dimension(km,nospA) :: f_Qp  ! Quota model for P
+    real, dimension(km,nospA) :: vN    ! Phytoplankton uptake rate of Nitrogen (mmol-N/cell/d)
+    real, dimension(km,nospA) :: vP    ! Phytoplankton uptake rate of Phosphorus (mmol-P/cell/d)
+    real, dimension(km,nospA) :: vSi   ! Phytoplankton uptake rate of Silica (mmol-Si/cell/d)
+    real, dimension(km) :: AupN  ! Total Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
+    real, dimension(km) :: AupP  ! Total Phytoplankton uptake of Phosphorus (mmol-P/m3/d)
+    real, dimension(km) :: AupSi ! Total Phytoplankton uptake of Silica (mmol-Si/m3/d)
  ! Monod equations for phytoplankton
-    real, dimension(nospA)    :: monodN  !Monod term in nitrogen uptake
-    real, dimension(nospA)    :: monodP  !Monod term in phosphorus uptake
-    real, dimension(nospA)    :: monodSi !Monod term in Si uptake
+    real, dimension(km,nospA) :: monodN  !Monod term in nitrogen uptake
+    real, dimension(km,nospA) :: monodP  !Monod term in phosphorus uptake
+    real, dimension(km,nospA) :: monodSi !Monod term in Si uptake
     real, dimension(km)       :: Ntotal   ! Total N (mmol/m3)
  ! Phytoplankton nutrient loss
-    real, dimension(nospA)    :: Amort ! Dead phytoplankton (cells/m3/day)
-    real, dimension(km)    :: AexudN          ! Sum of Exudation of N from all phytoplankton groups (mmol-N/m3/d)
-    real, dimension(km)    :: AexudP          ! Sum of Exudation of P from all phytoplankton groups (mmol-P/m3/d)
-    real, dimension(km)    :: ArespC          ! Phytoplankton equivalent carbon loss from respiration (mmol-C/m3/d)
+    real, dimension(km,nospA) :: Amort   ! Dead phytoplankton (cells/m3/day)
+    real, dimension(km)       :: AexudN  ! Sum of Exudation of N from all phytoplankton groups (mmol-N/m3/d)
+    real, dimension(km)       :: AexudP  ! Sum of Exudation of P from all phytoplankton groups (mmol-P/m3/d)
+    real, dimension(km)       :: ArespC  ! Phytoplankton equivalent carbon loss from respiration (mmol-C/m3/d)
 !------------------------------------------------------------------
 ! Zooplankton parameters
  !Zooplankton uptake and growth
-    real, dimension(km,nospZ)   :: Z         ! Zooplankton number density (indv./m3)
+    real, dimension(km,nospZ)    :: Z         ! Zooplankton number density (indv./m3)
     real, dimension(nospZ)       :: optNP    ! Optimal nutrient ratio for zooplankton
-    real, dimension(km,nospZ)       :: Zgrow    ! Zooplankton growth (indv./m3/d)
-    real, dimension(nospA,nospZ) :: Zgrazvol ! Grazing rate in units of biovolume (um3/m3/d)
-    real, dimension(nospA,nospZ) :: ZgrazA   ! Zooplankton grazing of phytoplankton (cells/m3/d)
-    real, dimension(nospA)       :: ZgrazA_tot ! Total zooplankton grazing of phytoplankton (cells/m3/d)
-    real, dimension(nospZ)       :: ZgrazN   ! Zooplankton grazing uptake of Nitrogen (mmol-N/m3/d)
-    real, dimension(nospZ)       :: ZgrazP   ! Zooplankton grazing uptake of Phosphorus (mmol-P/m3/d)
-    real, dimension(nospZ)       :: ZgrazC   ! Zooplankton grazing uptake of Carbon (mmol-C/m3/d)
-    real, dimension(nospZ)       :: ZinN     ! Zooplankton ingestion of Nitrogen (mmol-N/m3/d)
-    real, dimension(nospZ)       :: ZinP     ! Zooplankton ingestion of Phosphorus (mmol-P/m3/d)
-    real, dimension(nospZ)       :: ZinC     ! Zooplankton ingestion of Carbon (mmol-C/m3/d)
+    real, dimension(km,nospZ)    :: Zgrow    ! Zooplankton growth (indv./m3/d)
+    real, dimension(km,nospA,nospZ) :: Zgrazvol ! Grazing rate in units of biovolume (um3/m3/d)
+    real, dimension(km,nospA,nospZ) :: ZgrazA   ! Zooplankton grazing of phytoplankton (cells/m3/d)
+    real, dimension(km,nospA)    :: ZgrazA_tot ! Total zooplankton grazing of phytoplankton (cells/m3/d)
+    real, dimension(km,nospZ)    :: ZgrazN   ! Zooplankton grazing uptake of Nitrogen (mmol-N/m3/d)
+    real, dimension(km,nospZ)    :: ZgrazP   ! Zooplankton grazing uptake of Phosphorus (mmol-P/m3/d)
+    real, dimension(km,nospZ)    :: ZgrazC   ! Zooplankton grazing uptake of Carbon (mmol-C/m3/d)
+    real, dimension(km,nospZ)    :: ZinN     ! Zooplankton ingestion of Nitrogen (mmol-N/m3/d)
+    real, dimension(km,nospZ)    :: ZinP     ! Zooplankton ingestion of Phosphorus (mmol-P/m3/d)
+    real, dimension(km,nospZ)    :: ZinC     ! Zooplankton ingestion of Carbon (mmol-C/m3/d)
  !Monod equations for zooplankton ingestion of phytoplankton
     real, dimension(km,nospA,nospZ) :: monodZ   ! Monod term for zooplankton grazing
-    real, dimension(km,nospA)     :: Abiovol  ! Algae biovolume vector (um3/m3)
-    real, dimension(km,nospA)     :: Abiovol_thresh  ! Algae biovolume vector (um3/m3)
-    real, dimension(nospA,nospZ) :: top_A    ! Monod numerator value for phytoplankton group
-    real, dimension(nospA,nospZ) :: bottom_A ! Monod Denominator value for phytoplankton group
-    real, dimension(nospZ)       :: bottom   ! Sum of Monod Denominator value for all phytoplankton groups
+    real                            :: Abiovol  ! Algae biovolume vector (um3/m3)
+    real, dimension(nospA,nospZ)    :: top_A    ! Monod numerator value for phytoplankton group
+    real, dimension(nospA,nospZ)    :: bottom_A ! Monod Denominator value for phytoplankton group
+    real, dimension(nospZ)          :: bottom   ! Sum of Monod Denominator value for all phytoplankton groups
  !Zooplankton nutrient loss
     real, dimension(km,nospZ)       :: Zresp    ! Zooplankton respiration (individuals/m3/d)
-    real, dimension(km)          :: ZrespC   ! Carbon loss from zooplankton respiration (mmol-C/m3/day)
-    real, dimension(nospZ)       :: ZunC     ! Unassimilated ingested Carbon (mmol-C/m3/d)
-    real, dimension(nospZ)       :: ZunN     ! Unassimilated ingested Nitrogen (mmol-N/m3/d)
-    real, dimension(nospZ)       :: ZunP     ! Unassimilated ingested Phosphorus (mmol-P/m3/d)
-    real, dimension(nospZ)       :: ZunSi    ! Unassimilated ingested Silica (mmol-Si/m3/d)
-    real, dimension(km)          :: sumZunSi
-    real, dimension(km,nospZ)     :: Zmort    ! Dead zooplankton (individuals/m3/d)
-    real :: ZmortC(nospZ), ZmortC_tot        ! Carbon released from dead zooplankton (mmol-C/m3/d)
-    real :: ZmortN(nospZ), ZmortN_tot        ! Nitrogen released from dead zooplankton (mmol-N/m3/d)
-    real :: ZmortP(nospZ), ZmortP_tot        ! Phosphorus released from dead zooplankton (mmol-P/m3/d)
-    real :: ZslopC(nospZ), ZslopC_tot        ! Carbon lost to sloppy feeding (mmol-C/m3/d)
-    real :: ZslopN(nospZ), ZslopN_tot        ! Nitrogen lost to sloppy feeding (mmol-N/m3/d)
-    real :: ZslopP(nospZ), ZslopP_tot        ! Phosphorus lost to sloppy feeding (mmol-P/m3/d)
-    real, dimension(nospZ)       :: ZexN     ! Excretion from zooplankton (mmol-N/m3/d)
-    real, dimension(km)          :: sumZexN
-    real, dimension(nospZ)       :: ZexP     ! Excretion from zooplankton (mmol-P/m3/d)
-    real, dimension(km)          :: sumZexP
-    real, dimension(nospZ)       :: ZegC     ! Egestion from zooplankton (mmol-C/m3/d)
-    real, dimension(nospZ)       :: ZegN     ! Egestion from zooplankton (mmol-N/m3/d)
-    real, dimension(nospZ)       :: ZegP     ! Egestion from zooplankton (mmol-P/m3/d)
-    real, dimension(nospZ)       :: ZegSi    ! Egestion from zooplankton (mmol-Si/m3/d)
-    real, dimension(km)          :: sumZegSi
+    real, dimension(km)             :: ZrespC   ! Carbon loss from zooplankton respiration (mmol-C/m3/day)
+    real, dimension(km,nospZ)       :: ZunC     ! Unassimilated ingested Carbon (mmol-C/m3/d)
+    real, dimension(km,nospZ)       :: ZunN     ! Unassimilated ingested Nitrogen (mmol-N/m3/d)
+    real, dimension(km,nospZ)       :: ZunP     ! Unassimilated ingested Phosphorus (mmol-P/m3/d)
+    real, dimension(km,nospZ)       :: ZunSi    ! Unassimilated ingested Silica (mmol-Si/m3/d)
+    real, dimension(km)             :: ZunSi_tot
+    real, dimension(km,nospZ)       :: Zmort    ! Dead zooplankton (individuals/m3/d)
+    real :: ZmortC(km,nospZ), ZmortC_tot(km)  ! Carbon released from dead zooplankton (mmol-C/m3/d)
+    real :: ZmortN(km,nospZ), ZmortN_tot(km)  ! Nitrogen released from dead zooplankton (mmol-N/m3/d)
+    real :: ZmortP(km,nospZ), ZmortP_tot(km)  ! Phosphorus released from dead zooplankton (mmol-P/m3/d)
+    real :: ZslopC(km,nospZ), ZslopC_tot(km)  ! Carbon lost to sloppy feeding (mmol-C/m3/d)
+    real :: ZslopN(km,nospZ), ZslopN_tot(km)  ! Nitrogen lost to sloppy feeding (mmol-N/m3/d)
+    real :: ZslopP(km,nospZ), ZslopP_tot(km)  ! Phosphorus lost to sloppy feeding (mmol-P/m3/d)
+    real, dimension(km,nospZ)       :: ZexN   ! Excretion from zooplankton (mmol-N/m3/d)
+    real, dimension(km)             :: ZexN_tot
+    real, dimension(km,nospZ)       :: ZexP   ! Excretion from zooplankton (mmol-P/m3/d)
+    real, dimension(km)             :: ZexP_tot
+    real, dimension(km,nospZ)       :: ZegC   ! Egestion from zooplankton (mmol-C/m3/d)
+    real, dimension(km,nospZ)       :: ZegN   ! Egestion from zooplankton (mmol-N/m3/d)
+    real, dimension(km,nospZ)       :: ZegP   ! Egestion from zooplankton (mmol-P/m3/d)
+    real, dimension(km,nospZ)       :: ZegSi  ! Egestion from zooplankton (mmol-Si/m3/d)
+    real, dimension(km)          :: ZegSi_tot
     real, dimension(km) :: OM1_Ratio, OM2_Ratio             ! Separates sloppy feeding into OM1 and OM2
 !---------------------------------------------------------------------- 
 ! Time variables  
@@ -149,7 +146,7 @@
 !-----------------------------------------------------------------------
 ! Other variables 
     real, dimension(km) :: PrimProd                     ! Primary production (photosynthesis)
-    real, dimension(nospA+nospZ) :: Tadj ! Temperature adjustment factor
+    real, dimension(km,nospA+nospZ) :: Tadj ! Temperature adjustment factor
 !------------------------------------------------------------------    
 ! SAVE KGs for instant remineralization
     real, save :: KG1_save, KG2_save
@@ -187,23 +184,28 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
    if(istep.eq.1.and.inea.eq.10.and.writecsv.eq.1) then
      open(unit=6001,file="growth.csv")
      open(unit=6101,file="rates.csv")
+     open(unit=6201,file="cgem.csv")
      open(unit=6301,file="hydro.csv")
      open(unit=6401,file="light.csv")
-    write(6001,'(A58)') "Agrow,Aresp,uA,uN,uP,uE,uSi,f_E,f_N,f_P,f_Si,Tadj,A,min_S"
+     open(unit=6501,file="zoo.csv")
+     open(unit=6601,file="uptake.csv")
+     write(6001,'(A58)') "Agrow,Aresp,uA,uN,uP,uE,uSi,f_E,f_N,f_P,f_Si,Tadj,A,min_S"
     write(6101,'(A314)') "RO2,RNO3,RNH4,RPO4,RDIC,RSi,RALK,RN2,ROM1_A,ROM2_A,RO2_A,RNO3_A,RPO4_A,RDIC_A,RNH4_A,RSi_A,RALK_A,RN2_A,ROM1_Z,ROM2_Z,RO2_Z,RNO3_Z,RPO4_Z,RDIC_Z,RNH4_Z,RSi_Z,RALK_Z,RN2_Z,ROM1_R,ROM2_R,RO2_R,RNO3_R,RPO4_R,RDIC_R,RNH4_R,RSi_R,RALK_R,RN2_R,ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC"
+    write(6201,'(A132)') "A1,Qn1,Qp1,Z1,Z2,NO3,NH4,PO4,DIC,O2,OM1A,OM2A,OM1Z,OM2Z,OM1R,OM2R,CDOM,Si,OM1BC,OM2BC,Alk,sx1A,sy1A,sx2A,sy2A,sx1Z,sy1Z,sx2Z,sy2Z"
     write(6301,'(A22)') "TC_8,rad,wind,sal,temp"
     write(6401,'(A45)') "ksurf,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,kbot"
+    write(6501,'(A50)') "Z,Zgrow,Zresp,Zmort,ZgrazA_tot,ZgrazC,ZgrazP"
     endif
 
 
-do k=1,km
   do isp = 1,nf
-    if(ff(k,isp).le.0.) then
-      write(6,*) "ff.le.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff(k,isp)
-      ff(k,isp) = 0.0
-    endif
+    do k=1,km
+      if(ff(k,isp).le.0.) then
+        write(6,*) "ff.le.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff(k,isp)
+        ff(k,isp) = 0.0
+      endif
+    enddo
   enddo
-enddo
 
        do isp=1,nospA
          A(:,isp) = ff(:,iA(isp))
@@ -252,231 +254,227 @@ enddo
        Ntotal(:)    = NO3(:) + NH4(:)
 
 
-!write(6,*) "istep=",istep
 !-----------------------------------------------------------------
-!   Begin main ij loop for the biogeochemistry 
-!   calculations at time-level istep
+!   Begin biogeochemistry calculations at time-level istep
 !-----------------------------------------------------------------
 
 !----------------------------------------------------------------
 ! Get chlorophyll-a quantity per layer
   Chla_tot = Fixed_CChla(A)
 
-!----------------------------------------------------------------------
-! Execute the desired atmospheric light model.  To calculate PARsurf,
-! the effect amount of downward spectrally integrated irradiance 
-! just below the sea surface.  'Rad' is just above sea surface. 
-!----------------------------------------------------------------------
-  ! Rad(i) is short wave generated by NRL is used,
-  ! and is multiplied by SWtoPAR: ratio of PAR to
+!---- Underwater Light Model ----------------------------------
+! PARsurf is downward spectrally integrated irradiance just below the sea surface.  
+! Rad is just above sea surface. 
+  ! Rad was short wave generated by NRL, multiplied by SWtoPAR: ratio of PAR to
   ! shortwave radiation (hardcoded 4/30/14 to 0.43).
   ! Hardcoded to 0.47 on 2/11/16, Re: Tsubo and Walker, 2005
   ! PARfac is a multiplication factor for testing
   PARsurf = (0.47 * Rad) * PARfac
-!--End Calculate atmospheric model ---------------------------------------------
-
-!----------------------------------------------------------------------------
-! Underwater light model to calculate the 1-D radiation array PARdepth 
 ! PARbot is the downward irradiance (photons/cm2/sec) at the sea bottom
-!-------------------------------------------------------------------------
   if(PARsurf.le.0.) then
    PARbot = 0.0
    PARdepth = 0.0
   else
-  !This is a wrapper that calls converts mmol to g, Chla, etc., internally 
   call calc_PARdepth(TC_8,PARSurf,S,Chla_tot,CDOM,OM1A,OM1Z,OM1R,OM1BC,&
        &             PARdepth,PARbot )
   endif 
-!---------------------End Underwater Light Model-----------------------------------
 
-!-------------------------------------------------------------------------
-! Phytoplankton growth model to calculate the 1-D arrays Agrow and Aresp
-! Agrow(k) is the growth-rate  for vertical grid column (i) at cell (k).
-!-----------------------------------------------------------------------
- if(km .gt. 0) then
-   call calc_Agrow(PARdepth,T,Qn,Qp,Si,A,Agrow,uA,Aresp,uN,uP,uE,uSi,inea)
-!------end phytoplankton growth model-------------------------
- endif
+!---
+!A.1-A1 Phytoplankton
+!    dA_i/dt = Agrow_i - Aresp_i - ZgrazA_tot_i - Amort_i
+!--
 
-!Zooplankton grazing stuff
-   do isp = 1, nospA
-     Abiovol(:,isp) = A(:,isp)*volcell(isp)
-     Abiovol_thresh(:,isp) = Abiovol(:,isp) - Athresh(isp)
-   enddo
+ !- calc_Agrow calculates Agrow_i, Aresp_i
+ !    Agrow_i: production (cells/m3/s)
+ !    Aresp_i: sum of somatic and basal respirtion (cells/m3/s)
+ call calc_Agrow(PARdepth,T,Qn,Qp,Si,A,Agrow,uA,Aresp,uN,uP,uE,uSi,inea)
+
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "Agrow,Aresp,uA,uN,uP,uSi"
+    write(6,'(*(g0,:,", "))') Agrow(1,1),Aresp(1,1),uA(1,1),uN(1,1),uP(1,1),uSi(1,1)
+  endif
+
+ !- ZgrazA_tot_i: total zooplankton grazing on Ai by all zooplankton groups (cells/m3/d)
+ do k=1,km
+
+  do isp = 1, nospA
+     Abiovol         = A(k,isp)*volcell(isp) 
+     top_A(isp,:)    = AMAX1((Abiovol-Athresh(isp))*ediblevector(:,isp),0.0)
+     bottom_A(isp,:) = Abiovol * ediblevector(:,isp)
+  enddo
+ 
+  do isz = 1, nospZ
+     bottom(isz) = SUM(bottom_A(:,isz))   ! sum over isp
+  enddo
+ 
+  do isp = 1, nospA
+     monodZ(k,isp,:)  = top_A(isp,:)/(ZKa(:) + bottom(:))
+  enddo 
+
+ enddo
+
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "monodZ1:2,A,volcell,Athresh,top_A,bottom1:2,ediblevector(1:2,1)"
+    write(6,'(*(g0,:,", "))') monodZ(1,1,:),A(1,1),volcell(1),Athresh(1),top_A(1,1),bottom(:),ediblevector(:,1)
+  endif
 
 
-   do k=1,km
-     do isp = 1,nospA
-       do isz = 1,nospZ
-         top_A(isp,isz)    = AMAX1(Abiovol_thresh(k,isp),0.0)*ediblevector(isz,isp)
-         bottom_A(isp,isz) = Abiovol(k,isp)       *ediblevector(isz,isp)
-       enddo
-      enddo
-
-     do isz = 1, nospZ
-       bottom(isz) = SUM(bottom_A(:,isz))   ! sum over isp
-     enddo
-
-     do isp = 1, nospA
-       do isz = 1,nospZ
-         monodZ(k,isp,isz)  = top_A(isp,isz)/(ZKa(isz) + bottom(isz))
-       enddo 
-     enddo
-   enddo
 
 !--------------------------------------
-! Call temperature and growth functions
-!-----------------------------------------
-      call func_T( T,Tadj )
-!     Nutrient dependent growth function
-      call func_Qs( Qn, Qp, f_Qn, f_Qp) 
+!-- Temperature adjustment factor 
+   call func_T( T,Tadj )
+!-- Nutrient dependent growth function
+   call func_Qs( Qn, Qp, f_Qn, f_Qp)
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "Tadj,f_Qn,f_Qp"
+    write(6,'(*(g0,:,", "))') Tadj(1,1),f_Qn(1,1),f_Qp(1,1)
+  endif
 
-      do k=1,km
-!Nutrients only taken up during the day:
-     Is_Day = 1
-     if(Rad.le.tiny(x)) Is_Day = 0
 
-#ifdef DEBUG
-write(6,*) "In cgem, called T,Qx functions" 
-#endif
+!! Sum over phytoplankton groups for PrimProd, ArespC, AexudN, AexudP
+   do isp = 1, nospA
+     PrimProd(:) = SUM(Agrow(:,isp)*Qc(isp))    ! Phytoplankton primary production (mmol-C/m3/d)
+     ArespC(:)   = SUM(Aresp(:,isp)*Qc(isp))     ! Phytoplankton respiration     (mmol-C/m3/d)
+     AexudN(:)   = SUM(Aresp(:,isp)*Qn(:,isp))   ! Total Phytoplankton exudation (mmol-N/m3/d)
+     AexudP(:)   = SUM(Aresp(:,isp)*Qp(:,isp))   ! Total Phytoplankton exudation (mmol-P/m3/d)
+     Amort(:,isp)  = A(:,isp) * mA(isp)                         ! Dead phytoplankton (cells/m3/d)
+     enddo
 
-!--------------------------------------------------------------------------
-! Initialize counters to zero that are used to accumulate variable values
-! over the nospA phytoplankton groups and the nospZ zooplankton groups.
-!--------------------------------------------------------------------------
-      PrimProd(k)  = 0.0
-      ArespC(k)    = 0.0
-      AexudN(k)    = 0.0
-      AexudP(k)    = 0.0
-      AupN(k)      = 0.0
-      AupP(k)      = 0.0
-      AupSi(k)     = 0.0
-      ZgrazC(k)    = 0.0
-      ZgrazN(k)    = 0.0
-      ZgrazP(k)    = 0.0
-! ----------------------------------------------------------------------
-      do isp = 1, nospA      
-! ----------------------------------------------------------------------   
-
-!---------------------------------------------------------------------      
-! Note that the expressions for PrimProd, ArespC, AexudN, AexudP are 
-! sums over the isp phytoplankton groups. When the isp loop is complete,
-! PrimProd, ArespC. AexudN, and AexudP will represent totals for
-! all the nospA phytoplankton groups. 
-!--------------------------------------------------------------------
-     PrimProd = PrimProd + Agrow(k,isp)*Qc(isp)     ! Phytoplankton primary production (mmol-C/m3/d)
-     ArespC   = ArespC + Aresp(k,isp)*Qc(isp)       ! Phytoplankton respiration     (mmol-C/m3/d)	
-     AexudN   = AexudN + Aresp(k,isp)*Qn(k,isp)     ! Total Phytoplankton exudation (mmol-N/m3/d)
-     AexudP   = AexudP + Aresp(k,isp)*Qp(k,isp)     ! Total Phytoplankton exudation (mmol-P/m3/d)
-     Amort(isp)  = A(k,isp) * mA(isp)                     ! Dead phytoplankton (cells/m3/day)
-
-!    Monod Equations
-     monodN(isp)  = Ntotal(k)/(Ntotal(k)+Kn(isp))
-     monodP(isp)  = PO4(k)/(PO4(k)+Kp(isp))
-     monodSi(isp) = Si(k)/(Si(k)+Ksi(isp))
-
-#ifdef DEBUG
-write(6,*) "In cgem, set Amort, Ntotal monod" 
-#endif
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "PrimProd,ArespC,AexudN,AexudP,Amort"
+    write(6,'(*(g0,:,", "))') PrimProd(1),ArespC(1),AexudN(1),AexudP(1),Amort(1,1) 
+  endif
 
 !------------------------------------------------------------------------     
 ! Nutrient limited uptake:
 ! Find Rate Limiting Nutrient RLN for N, P, and Si:
-! N==1, P==2, Si==3
-   if(Ntotal(k).le.PO4(k).and.Ntotal(k).le.Si(k)) then
-     RLN = 1
-   elseif (PO4(k).le.Ntotal(k).and.PO4(k).le.Si(k)) then
-     RLN = 2
-   else
-     RLN = 3
-   endif
-
-!------------------------------------------------------------------------
-   if(Is_Day.eq.0) then  !Nutrient uptake only takes place during the day
-        vN(k) = 0
-        vP(k) = 0
-        vSi(k) = 0
+   if(Rad.le.tiny(x)) then  !Nutrient uptake only takes place during the day
+        vN = 0
+        vP = 0
+        vSi = 0
    else  !Day
       !Rate limiting nutrient is N
-      if(RLN(k).eq.1) then
-         vN(k) = Q10_T(T(k),vmaxN(isp))*monodN(isp)*f_Qn(k,isp)
+      !    Monod Equations
+      ! Kx is half saturation coefficient for x
+      do isp = 1, nospA
+        monodN(:,isp)  = Ntotal(:)/(Ntotal(:)+Kn(isp))
+        monodP(:,isp)  = PO4(:)/(PO4(:)+Kp(isp))
+        monodSi(:,isp) = Si(:)/(Si(:)+Ksi(isp))
+      enddo
 
-         vP(k) = Q10_T(T(k),vmaxP(isp))*monodP(isp)*f_Qp(k,isp)&
+      do k=1,km
+        !Rate limiting nutrient is N
+        if(Ntotal(k).le.PO4(k).and.Ntotal(k).le.Si(k)) then
+          do isp = 1, nospA
+           vN(k,isp) = Q10_T(T(k),vmaxN(isp))*monodN(k,isp)*f_Qn(k,isp)
+
+           vP(k,isp) = Q10_T(T(k),vmaxP(isp))*monodP(k,isp)*f_Qp(k,isp)&
      &      *( Ntotal(k)/(Ntotal(k)+aN(isp)*Kn(isp)) )
 
-         vSi(k) = Q10_T(T(k),vmaxSi(isp))*monodSi(isp)        &
+           vSi(k,isp) = Q10_T(T(k),vmaxSi(isp))*monodSi(k,isp)        &
      &      *( Ntotal(k)/(Ntotal(k)+aN(isp)*Kn(isp)) )
-      !Rate limiting nutrient is P
-      elseif(RLN(k).eq.2) then
-         vN(k) = Q10_T(T(k),vmaxN(isp))*monodN(isp)*f_Qn(k,isp)&
-     &      *( PO4(k)/(PO4(k)+aN(isp)*Kp(isp)) )
+          enddo
 
-         vP(k) = Q10_T(T(k),vmaxP(isp))*monodP(isp)*f_Qp(k,isp)
+        !Rate limiting nutrient is P
+        elseif(PO4(k).le.Ntotal(k).and.PO4(k).le.Si(k)) then
+           do isp = 1, nospA
+            vN(k,isp) = Q10_T(T(k),vmaxN(isp))*monodN(k,isp)*f_Qn(k,isp)&
+     &         *( PO4(k)/(PO4(k)+aN(isp)*Kp(isp)) )
 
-         vSi(k) = Q10_T(T(k),vmaxSi(isp))*monodSi(isp)       &
-     &      *( PO4(k)/(PO4(k)+aN(isp)*Kp(isp)) )
-      !Rate limiting nutrient is Si 
-      else
-         vN(k) = Q10_T(T(k),vmaxN(isp))*monodN(isp)*f_Qn(k,isp)&
-     &      *( Si(k)/(Si(k)+aN(isp)*Ksi(isp)) )
+            vP(k,isp) = Q10_T(T(k),vmaxP(isp))*monodP(k,isp)*f_Qp(k,isp)
 
-         vP(k) = Q10_T(T(k),vmaxP(isp))*monodP(isp)*f_Qp(k,isp)&
-     &      *( Si(k)/(Si(k)+aN(isp)*Ksi(isp)) )
+            vSi(k,isp) = Q10_T(T(k),vmaxSi(isp))*monodSi(k,isp)       &
+     &         *( PO4(k)/(PO4(k)+aN(isp)*Kp(isp)) )
+           enddo
 
-         vSi(k) = Q10_T(T(k),vmaxSi(isp))*monodSi(isp)
+        !Rate limiting nutrient is Si 
+        else
+           do isp = 1, nospA
+            vN(k,isp) = Q10_T(T(k),vmaxN(isp))*monodN(k,isp)*f_Qn(k,isp)&
+     &         *( Si(k)/(Si(k)+aN(isp)*Ksi(isp)) )
 
-      endif
+            vP(k,isp) = Q10_T(T(k),vmaxP(isp))*monodP(k,isp)*f_Qp(k,isp)&
+     &         *( Si(k)/(Si(k)+aN(isp)*Ksi(isp)) )
 
-   endif !Endif Is_Day.eq.0
+            vSi(k,isp) = Q10_T(T(k),vmaxSi(isp))*monodSi(k,isp)
+           enddo
+        endif
+      enddo !k
 
-     
-#ifdef DEBUG
-write(6,*) "In cgem, finished Nutrients"
-#endif
- 
-!--------------------------------------------------------------      
-! When isp loop is done, AupN and AupP are totals for all nospA 
-! phytoplankton groups in cell k          
-!---------------------------------------------------------------   
-      AupN(k) = AupN(k) + A(k,isp)*vN(k)     ! Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
-      AupP(k) = AupP(k) + A(k,isp)*vP(k)     ! Phytoplankton uptake of Phosphorus (mmol-P/m3/d) 
-      AupSi(k) = AupSi(k) + A(k,isp)*vSi(k)   ! Phytoplankton uptake of Silica (mmol-Si/m3/d)
- 
-!-----------------------------------------------------------------------
-! Note that Zumax(1)*monodZ(isp,1) is volume of type isp phytoplankton
-! eaten per day by type 1 zooplankton. Therefore
-!      Zumax(1)*monodZ(isp,1)/volcell(isp)
-! is the number of type isp phytoplankton eaten per day by type 1 
-! zooplankton. An analogous statement holds for type 2 zooplankton
-!-----------------------------------------------------------------------
-      Zgrazvol(isp,:)     = Z(k,:)*Zumax(:)*monodZ(k,isp,:)   ! Grazing of phytoplankton by biovolume (um3/m3/d)
-      ZgrazA(isp,:)       = Zgrazvol(isp,:)/volcell(isp)  ! Grazing of phytoplankton (cells/m3/d)
-      ZgrazA_tot(isp) = SUM( ZgrazA(isp,:) ) 
+   endif !End Nutrient Uptake
 
-!----------------------------------------------------------------------
-! When the isp loop is finished, ZgrazC, ZgrazN, and ZgrazP will be total
-! carbon, nitrogen, and phosphorous uptake of zooplankton from grazing
-! all phytoplankton groups
-!---------------------------------------------------------------------
-      ZgrazC(:) = ZgrazC(:) + ZgrazA(isp,:) * Qc(isp)     ! Carbon uptake from grazing (mmol-C/m3/day)
-      ZgrazN(:) = ZgrazN(:) + ZgrazA(isp,:) * Qn(k,isp)   ! Nitrogen uptake from grazing( mmol-N/m3/day)
-      ZgrazP(:) = ZgrazP(:) + ZgrazA(isp,:) * Qp(k,isp)   ! Phosphorus uptake from grazing (mmol-P/m3/day)
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "vN,vP,vSi"
+    write(6,'(*(g0,:,", "))') vN(1,1),vP(1,1),vSi(1,1) 
+  endif
 
-!---------------------------------------------------------
-!-A; Phytoplankton number density (cells/m3);
-!---------------------------------------------------------
-      ff_new(k,iA(isp)) = AMAX1(A(k,isp)        &
-      & + ( Agrow(k,isp) - Aresp(k,isp) - ZgrazA_tot(isp) - Amort(isp) )*dTd, 1.)
-    
+
+!! ----------------------------------------------------------------------
+!! Sum over phytoplankton groups for PrimProd, ArespC, AexudN, AexudP
+   do isp = 1, nospA
+     AupN(:) = SUM(A(:,isp)*vN(:,isp))     ! Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
+     AupP(:) = SUM(A(:,isp)*vP(:,isp))     ! Phytoplankton uptake of Phosphorus (mmol-P/m3/d)
+     AupSi(:) = SUM(A(:,isp)*vSi(:,isp))  ! Phytoplankton uptake of Silica (mmol-Si/m3/d)
+   enddo
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "AupN,AupP,AupSi"
+    write(6,'(*(g0,:,", "))') AupN(1),AupP(1),AupSi(1)
+  endif
+
+
+  do k=1,km
+    do isp=1,nospA
+      ZgrazA(k,isp,:)   = (Z(k,:)*Zumax(:)*monodZ(k,isp,:))/volcell(isp)   ! Grazing of phytoplankton by plankton (cells/m3/d)
+      ZgrazA_tot(k,isp) = SUM( ZgrazA(k,isp,:) )
+    enddo
+  enddo
+
+   do isp = 1,nospA
+    do isz = 1,nospZ
+      ZgrazC(:,isz) = ZgrazA(:,isp,isz) * Qc(isp)     ! Carbon uptake from grazing (mmol-C/m3/day)
+      ZgrazN(:,isz) = ZgrazA(:,isp,isz) * Qn(:,isp)   ! Nitrogen uptake from grazing( mmol-N/m3/day)
+      ZgrazP(:,isz) = ZgrazA(:,isp,isz) * Qp(:,isp)   ! Phosphorus uptake from grazing (mmol-P/m3/day)
+    enddo
+   enddo
+
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "ZgrazA,ZgrazA_tot,ZgrazC,ZgrazN,ZgrazP"
+    write(6,'(*(g0,:,", "))') ZgrazA(1,1,1),ZgrazA_tot(1,1),ZgrazC(1,1),ZgrazN(1,1),ZgrazP(1,1) 
+    write(6,'(*(g0,:,", "))') ZgrazA(1,1,2),ZgrazA_tot(1,1),ZgrazC(1,2),ZgrazN(1,2),ZgrazP(1,2)
+  endif
+
+
+  !---------------------------------------------------------
+  !-A; Phytoplankton number density (cells/m3);
+  !---------------------------------------------------------
+!---
+!A.1-A2 Qn: Phytoplankton Nitrogen Quota (mmol-N/cell) 
+!    dQn_i/dt = vN_i - Qn_i*uA_i - AexudN_i/A_i 
+!     uptake - utilization to support growth - exudation associated with respiration 
+
+
+  do isp=1,nospA
+      ff_new(:,iA(isp)) = A(:,isp)        &
+      & + ( Agrow(:,isp) - Aresp(:,isp) - ZgrazA_tot(:,isp) - Amort(:,isp) )*dTd
+  enddo
+
 !----------------------------------------------------------------------
 !-Qn: Phytoplankton Nitrogen Quota (mmol-N/cell)
 !----------------------------------------------------------------------
 !! Enforce minima for Droop, also enforce maxima if not equal Droop (which_quota=1)
   if(which_quota.eq.1) then
-     ff_new(k,iQn(isp)) = AMAX1(Qn(k,isp) + (vN(k) - Qn(k,isp)*uA(k,isp))*dTd,QminN(isp))
-!! , also enforce maxima if not equal Droop (which_quota=1)
+    do isp=1,nospA
+      do k=1,km
+       ff_new(k,iQn(isp)) = AMAX1(Qn(k,isp) + (vN(k,isp) - Qn(k,isp)*uA(k,isp))*dTd,QminN(isp))
+      enddo
+    enddo
+  !! , also enforce maxima if not equal Droop (which_quota=1)
   else
-     ff_new(k,iQn(isp)) = AMIN1(AMAX1(Qn(k,isp) + (vN(k) - Qn(k,isp)*uA(k,isp))*dTd,QminN(isp)),QmaxN(isp))
+    do isp=1,nospA
+      do k=1,km
+        ff_new(k,iQn(isp)) = AMIN1(AMAX1(Qn(k,isp) + (vN(k,isp) - Qn(k,isp)*uA(k,isp))*dTd,QminN(isp)),QmaxN(isp))
+      enddo
+    enddo
   endif
 
 !----------------------------------------------------------------------
@@ -484,99 +482,140 @@ write(6,*) "In cgem, finished Nutrients"
 !----------------------------------------------------------------------
 !! Enforce minima for Droop, also enforce maxima if not equal Droop (which_quota=1)
   if(which_quota.eq.1) then
-     ff_new(k,iQp(isp)) = AMAX1(Qp(k,isp) + (vP(k) - Qp(k,isp)*uA(k,isp))*dTd,QminP(isp))
+    do isp=1,nospA
+      do k=1,km
+        ff_new(k,iQp(isp)) = AMAX1(Qp(k,isp) + (vP(k,isp) - Qp(k,isp)*uA(k,isp))*dTd,QminP(isp))
+      enddo
+    enddo
 !! , also enforce maxima if not equal Droop (which_quota=1)
   else
-     ff_new(k,iQp(isp)) = AMIN1(AMAX1(Qp(k,isp) + (vP(k) - Qp(k,isp)*uA(k,isp))*dTd,QminP(isp)),QmaxP(isp))
+    do isp=1,nospA
+      do k=1,km
+          ff_new(k,iQp(isp)) = AMIN1(AMAX1(Qp(k,isp) + (vP(k,isp) - Qp(k,isp)*uA(k,isp))*dTd,QminP(isp)),QmaxP(isp))
+      enddo
+    enddo
   endif
-
 !----------------------------------------------------------------------- 
-  enddo  ! END OF do isp = 1, nospA 
 
+
+!---
+!A.2-A4 Z: Zooplankton (individuals/m3) 
+!    dZ_j/dt = Zgrow_j - Zresp_j - Zmort_j 
+!    growth - respiration - mortality
+
+  !Zgrow_j - zooplankton growth rates (individuals/m3/d)
+  !   Zgrow_j = (func_T) * min(ZinN_j/zQn_j,ZinP_j/ZQp_j)
+  !    ZinN_j = ZgrazN_j - Zslop_j - ZunN_j
+  !  ZgrazN_j = Sum_i(ZgrazA_ij*Qn_i)
+  ! ZslopN_j  = Zslop*ZgrazN_k
+  ! ZunN_j = (1-Zeffic_j) * (ZgrazN_j - ZslopN_j)
+
+!----------------------------------------------------------------------
+! ZgrazC, ZgrazN, and ZgrazP are total carbon, nitrogen, and phosphorus
+!   uptake of zooplankton from grazing all phytoplankton groups
+!---------------------------------------------------------------------
+do isz=1,nospZ
 !-------------------------------------------------------------------
 ! Now calculate the total ingested ZinC, ZinN, and ZinP of C, N, and P
 !-------------------------------------------------------------------
-      ZslopC(:)  = Zslop(:)*ZgrazC(:)                      ! Sloppy feeding (mmol-C/m3/d)
-      ZslopC_tot = SUM(ZslopC)                          ! Total Sloppy feeding (mmol-C/m3/d)
-      ZunC(:)    = (1.-Zeffic(:))*(ZgrazC(:)-ZslopC(:)) ! Unassimilated (mmol-C/m3/d)
-      ZinC(:)    = ZgrazC(:) - ZslopC(:) - ZunC(:)         ! Ingested (mmol-C/m3/d)
+  ZslopC(:,isz)  = Zslop(isz)*ZgrazC(:,isz)                      ! Sloppy feeding (mmol-C/m3/d)
+  ZunC(:,isz)    = (1.-Zeffic(isz))*(ZgrazC(:,isz)-ZslopC(:,isz))    ! Unassimilated (mmol-C/m3/d)
+  ZinC(:,isz)    = ZgrazC(k,isz) - ZslopC(:,isz) - ZunC(:,isz)         ! Ingested (mmol-C/m3/d)
 
-      ZslopN(:)  = Zslop(:)*ZgrazN(:)                      ! Sloppy feeding (mmol-N/m3/d)
-      ZslopN_tot = SUM(ZslopN)                             ! Total Sloppy feeding (mmol-N/m3/d) 
-      ZunN(:)    = (1.-Zeffic(:))*(ZgrazN(:)-ZslopN(:)) ! Unassimilated (mmol-N/m3/d)
-      ZinN(:)    = ZgrazN(:) - ZslopN(:) - ZunN(:)         ! Ingested (mmol-N/m3/d)
+  ZslopN(:,isz)  = Zslop(isz)*ZgrazN(:,isz)                      ! Sloppy feeding (mmol-N/m3/d)
+  ZunN(:,isz)    = (1.-Zeffic(isz))*(ZgrazN(:,isz)-ZslopN(:,isz)) ! Unassimilated (mmol-N/m3/d)
+  ZinN(:,isz)    = ZgrazN(:,isz) - ZslopN(:,isz) - ZunN(:,isz)         ! Ingested (mmol-N/m3/d)
 
-      ZslopP(:)  = Zslop(:)*ZgrazP(:)                      ! Sloppy feeding (mmol-P/m3/d)
-      ZslopP_tot = SUM(ZslopP)                             ! Total Sloppy feeding (mmol-P/m3/d)
-      ZunP(:)    = (1.-Zeffic(:))*(ZgrazP(:)-ZslopP(:)) ! Unassimilated (mmol-P/m3/d)
-      ZinP(:)    = ZgrazP(:) - ZslopP(:) - ZunP(:)         ! Ingested (mmol-P/m3/d)
+  ZslopP(:,isz)  = Zslop(isz)*ZgrazP(:,isz)                      ! Sloppy feeding (mmol-P/m3/d)
+  ZunP(:,isz)    = (1.-Zeffic(isz))*(ZgrazP(:,isz)-ZslopP(:,isz)) ! Unassimilated (mmol-P/m3/d)
+  ZinP(:,isz)    = ZgrazP(:,isz) - ZslopP(:,isz) - ZunP(:,isz)         ! Ingested (mmol-P/m3/d)
 !-------------------------------------------------
+enddo !isz
 
+
+do k=1,km
+!-------------------------------------------------------------------
+! Now calculate the total ingested ZinC, ZinN, and ZinP of C, N, and P
+!-------------------------------------------------------------------
+  ZslopC_tot(k) = SUM(ZslopC(k,:))                             ! Total Sloppy feeding (mmol-C/m3/d)
+  ZslopN_tot(k) = SUM(ZslopN(k,:))                             ! Total Sloppy feeding (mmol-N/m3/d) 
+  ZslopP_tot(k) = SUM(ZslopP(k,:))                             ! Total Sloppy feeding (mmol-P/m3/d)
+enddo !k
 
 !------------------------------------         
 ! Liebigs Law for zooplankton group isz 
 !------------------------------------
-  do isz=1,nospZ
-
-     if (ZinN(isz) .gt. optNP(isz)*ZinP(isz)) then  
-        Zgrow(k,isz)= ZinP(isz)/ZQp(isz)                   ! P-limited growth (indv./m3/d) 
-        ZegN(isz) = ZinN(isz) - ZinP(isz)*optNP(isz)       ! P-limited N excretion (mmol-N/m3/d) 
+     do isz=1,nospZ
+     do k=1,km
+      if (ZinN(k,isz) .gt. optNP(isz)*ZinP(k,isz)) then  
+        Zgrow(k,isz)= ZinP(k,isz)/ZQp(isz)                   ! P-limited growth (indv./m3/d) 
+        ZegN(k,isz) = ZinN(k,isz) - ZinP(k,isz)*optNP(isz)       ! P-limited N excretion (mmol-N/m3/d) 
                                                    ! determined by subtracting N-equivalent of ZinP
-        ZegC(isz) = ZinC(isz) - ZinP(isz)/ZQp(isz)*ZQc(isz)  ! P-limited C excretion (mmol-C/m3/d)
-        ZegP(isz) = 0.                        
+        ZegC(k,isz) = ZinC(k,isz) - ZinP(k,isz)/ZQp(isz)*ZQc(isz)  ! P-limited C excretion (mmol-C/m3/d)
+        ZegP(k,isz) = 0.                        
       else
-        Zgrow(k,isz)= ZinN(isz)/ZQn(isz)                   ! N-limited growth (indv./m3/d)
-        ZegP(isz) = ZinP(isz) - ZinN(isz)/optNP(isz)       ! N-limited P excretion (mmol-P/m3/d)    
+        Zgrow(k,isz)= ZinN(k,isz)/ZQn(isz)                   ! N-limited growth (indv./m3/d)
+        ZegP(k,isz) = ZinP(k,isz) - ZinN(k,isz)/optNP(isz)       ! N-limited P excretion (mmol-P/m3/d)    
                                                    ! determined by subtracting P-equivalent of ZinN
-        ZegC(isz) = ZinC(isz) - ZinN(isz)/ZQn(isz)*ZQc(isz)  ! N-limited C excretion (mmol-C/m3/d)
-        ZegN(isz) = 0.
-      endif
-
-  enddo
+        ZegC(k,isz) = ZinC(k,isz) - ZinN(k,isz)/ZQn(isz)*ZQc(isz)  ! N-limited C excretion (mmol-C/m3/d)
+        ZegN(k,isz) = 0.
+    endif
+    enddo !k
+    enddo !isz
 
 !------------------------------------------------
 
 !-----------------------------------------------------
 ! ZegC should not be negative 
   do isz=1,nospZ
-      if(ZegC(isz).lt.0.) then
-          ZegC(isz) = 0.
+    do k=1,km
+      if(ZegC(k,isz).lt.0.) then
+          ZegC(k,isz) = 0.
           !ZegN(isz) = 0.
           !ZegP(isz) = 0.
       endif
+    enddo 
   enddo
 
-! Egestion and unassimilated for Si set equivalent to that of N
-      ZegSi = ZegN
-      ZunSi = ZunN
-      sumZegSi(k) = SUM(ZegSi)
-      sumZunSi(k) = SUM(ZunSi)
+!
+  do isz=1,nospZ
+    ! Egestion and unassimilated for Si set equivalent to that of N
+    ZegSi(:,isz) = ZegN(:,isz)
+    ZunSi(:,isz) = ZunN(:,isz)
+    Zresp(:,isz) = (Zgrow(:,isz)*Zrespg(isz) + Z(:,isz)*Zrespb(isz)) !Zooplankton respiration (indv./m3/d)
+    ZexN(:,isz)    = Zresp(:,isz)*ZQn(isz)               ! (mmol-N/m3/d)
+    ZexP(:,isz)    = Zresp(:,isz)*ZQp(isz)               ! (mmol-P/m3/d)
+    Zmort(:,isz)     = Zm(isz) * Z(:,isz) * Z(:,isz)     ! (indv./m3/d)
+    ZmortC(:,isz)      = Zmort(:,isz)*ZQc(isz)           ! (mmol-C/m3/d)
+    ZmortN(:,isz)      = Zmort(:,isz)*ZQn(isz)           ! (mmol-N/m3/d)
+    ZmortP(:,isz)      = Zmort(:,isz)*ZQp(isz)           ! (mmol-P/m3/d)
+  enddo
 
-! Zooplankton respiration based on growth and basal metabolism, both modified by a temperature adjustment factor 
-      Zresp(k,:) = (Zgrow(k,:)*Zrespg(:) + Z(k,:)*Zrespb(:)) !Zooplankton respiration (indv./m3/d)
+  do k=1,km
+    ZegSi_tot(k) = SUM(ZegSi(k,:))
+    ZunSi_tot(k) = SUM(ZunSi(k,:))
+    ZexN_tot(k) = SUM(ZexN(k,:))
+    ZexP_tot(k) = SUM(ZexP(k,:))
+    ZmortC_tot(k) = SUM(ZmortC(k,:))
+    ZmortN_tot(k) = SUM(ZmortN(k,:))
+    ZmortP_tot(k) = SUM(ZmortP(k,:))
+  enddo
 
-      ZrespC(k)   = SUM(Zresp(k,:)*ZQc)                                       !Total Carbon loss from respiration (mmol-C/m3/d)
 
-                                                ! Excretion
-      ZexN(:)   = Zresp(k,:)*ZQn(:)               ! (mmol-N/m3/d)
-      sumZexN(k) = SUM(ZexN)
-      ZexP(:)   = Zresp(k,:)*ZQp(:)               ! (mmol-P/m3/d)
-      sumZexP(k) = SUM(ZexP)
-                                                ! Mortality
-     Zmort(k,:)       = Zm(:) * Z(k,:) * Z(k,:)       ! (indv./m3/d)
-     ZmortC(:)      = Zmort(k,:)*ZQc(:)           ! (mmol-C/m3/d)
-     ZmortC_tot     = SUM(ZmortC)
-     ZmortN(:)      = Zmort(k,:)*ZQn(:)           ! (mmol-N/m3/d)
-     ZmortN_tot     = SUM(ZmortN)
-     ZmortP(:)      = Zmort(k,:)*ZQp(:)           ! (mmol-P/m3/d)
-     ZmortP_tot     = SUM(ZmortP)
+
 !-------------------------------------------------------------------------
 
 !---------------------------------------------------------
-!-G; Zooplankton number density (individuals/m3);
+!-Z; Zooplankton number density (individuals/m3);
 !---------------------------------------------------------
+
+  do isz=1,nospZ
+    do k=1,km
       ff_new(k,iZ(:))  = AMAX1( Z(k,:)                         &
-      &      + (Zgrow(k,:) - Zresp(k,:) - Zmort(k,:))*dTd, 1.)
+     &      + (Zgrow(k,:) - Zresp(k,:) - Zmort(k,:))*dTd, 1.)
+    enddo
+  enddo
+
 
 #ifdef DEBUG
 write(6,*) "In cgem, updated iZ, which_Fluxes(iInRemin),KG_bot=",which_Fluxes(iInRemin),KG_bot
@@ -584,6 +623,7 @@ write(6,*) "In cgem, updated iZ, which_Fluxes(iInRemin),KG_bot=",which_Fluxes(iI
 
 !------------------------------------------------------------------------
 
+do k=1,km
 !-----------------------------------------------------------
 ! Remineralization - reactions
 !---------------------------------------------------------------
@@ -755,22 +795,22 @@ OM2_PA(k) = 0.
 do isp=1,nospA
  if ( uN(k,isp) .lt. uP(k,isp)  ) then
 !Particulate
-   OM1_CA(k) = OM1_CA(k) + Amort(isp)*(Qn(k,isp)-QminN(isp))/Qn(k,isp)*Qc(isp)
-   OM1_NA(k) = OM1_NA(k) + Amort(isp)*(Qn(k,isp)-QminN(isp))
-   OM1_PA(k) = OM1_PA(k) + Amort(isp)*(Qn(k,isp)-QminN(isp))/Qn(k,isp)*Qp(k,isp)
+   OM1_CA(k) = OM1_CA(k) + Amort(k,isp)*(Qn(k,isp)-QminN(isp))/Qn(k,isp)*Qc(isp)
+   OM1_NA(k) = OM1_NA(k) + Amort(k,isp)*(Qn(k,isp)-QminN(isp))
+   OM1_PA(k) = OM1_PA(k) + Amort(k,isp)*(Qn(k,isp)-QminN(isp))/Qn(k,isp)*Qp(k,isp)
 !!Dissolved
-   OM2_CA(k) = OM2_CA(k) + Amort(isp)*QminN(isp)/Qn(k,isp)*Qc(isp)
-   OM2_NA(k) = OM2_NA(k) + Amort(isp)*QminN(isp)
-   OM2_PA(k) = OM2_PA(k) + Amort(isp)*QminN(isp)/Qn(k,isp)*Qp(k,isp)
+   OM2_CA(k) = OM2_CA(k) + Amort(k,isp)*QminN(isp)/Qn(k,isp)*Qc(isp)
+   OM2_NA(k) = OM2_NA(k) + Amort(k,isp)*QminN(isp)
+   OM2_PA(k) = OM2_PA(k) + Amort(k,isp)*QminN(isp)/Qn(k,isp)*Qp(k,isp)
  else
 !Particulate
-   OM1_CA(k) = OM1_CA(k) + Amort(isp)*(Qp(k,isp)-QminP(isp))/Qp(k,isp)*Qc(isp)
-   OM1_NA(k) = OM1_NA(k) + Amort(isp)*(Qp(k,isp)-QminP(isp))/Qp(k,isp)*Qn(k,isp)
-   OM1_PA(k) = OM1_PA(k) + Amort(isp)*(Qp(k,isp)-QminP(isp))
+   OM1_CA(k) = OM1_CA(k) + Amort(k,isp)*(Qp(k,isp)-QminP(isp))/Qp(k,isp)*Qc(isp)
+   OM1_NA(k) = OM1_NA(k) + Amort(k,isp)*(Qp(k,isp)-QminP(isp))/Qp(k,isp)*Qn(k,isp)
+   OM1_PA(k) = OM1_PA(k) + Amort(k,isp)*(Qp(k,isp)-QminP(isp))
 !!Dissolved
-   OM2_CA(k) = OM2_CA(k) + Amort(isp)*QminP(isp)/Qp(k,isp)*Qc(isp)
-   OM2_NA(k) = OM2_NA(k) + Amort(isp)*QminP(isp)/Qp(k,isp)*Qn(k,isp)
-   OM2_PA(k) = OM2_PA(k) + Amort(isp)*QminP(isp)
+   OM2_CA(k) = OM2_CA(k) + Amort(k,isp)*QminP(isp)/Qp(k,isp)*Qc(isp)
+   OM2_NA(k) = OM2_NA(k) + Amort(k,isp)*QminP(isp)/Qp(k,isp)*Qn(k,isp)
+   OM2_PA(k) = OM2_PA(k) + Amort(k,isp)*QminP(isp)
  endif
 enddo
 
@@ -815,34 +855,33 @@ write(6,*) "In cgem, OM1,2 Ratio=",OM1_Ratio,OM2_Ratio
 
     if(nospZ.eq.1) then 
                                                                   ! Particulate
-     OM1_CZ(k)  = .5*(ZegC(1) + ZunC(1) + ZmortC_tot) + OM1_Ratio(k)*ZslopC_tot !  (mmol-C/m3/d)
-     OM1_NZ(k)  = .5*(ZegN(1) + ZunN(1) + ZmortN_tot) + OM1_Ratio(k)*ZslopN_tot !  (mmol-N/m3/d)
-     OM1_PZ(k)  = .5*(ZegP(1) + ZunP(1) + ZmortP_tot) + OM1_Ratio(k)*ZslopP_tot !  (mmol-P/m3/d)
+     OM1_CZ(k)  = .5*(ZegC(k,1) + ZunC(k,1) + ZmortC_tot(k)) + OM1_Ratio(k)*ZslopC_tot(k) !  (mmol-C/m3/d)
+     OM1_NZ(k)  = .5*(ZegN(k,1) + ZunN(k,1) + ZmortN_tot(k)) + OM1_Ratio(k)*ZslopN_tot(k) !  (mmol-N/m3/d)
+     OM1_PZ(k)  = .5*(ZegP(k,1) + ZunP(k,1) + ZmortP_tot(k)) + OM1_Ratio(k)*ZslopP_tot(k) !  (mmol-P/m3/d)
                                                                   ! Dissolved
-     OM2_CZ(k)  = .5*(ZegC(1) + ZunC(1) + ZmortC_tot) + OM2_Ratio(k)*ZslopC_tot              !  (mmol-C/m3/d)
-     OM2_NZ(k)  = .5*(ZegN(1) + ZunN(1) + ZmortN_tot) + OM2_Ratio(k)*ZslopN_tot              !  (mmol-N/m3/d)
-     OM2_PZ(k)  = .5*(ZegP(1) + ZunP(1) + ZmortP_tot) + OM2_Ratio(k)*ZslopP_tot              !  (mmol-P/m3/d)
+     OM2_CZ(k)  = .5*(ZegC(k,1) + ZunC(k,1) + ZmortC_tot(k)) + OM2_Ratio(k)*ZslopC_tot(k)              !  (mmol-C/m3/d)
+     OM2_NZ(k)  = .5*(ZegN(k,1) + ZunN(k,1) + ZmortN_tot(k)) + OM2_Ratio(k)*ZslopN_tot(k)              !  (mmol-N/m3/d)
+     OM2_PZ(k)  = .5*(ZegP(k,1) + ZunP(k,1) + ZmortP_tot(k)) + OM2_Ratio(k)*ZslopP_tot(k)              !  (mmol-P/m3/d)
 
     else if(nospZ.eq.2) then
                                                                   ! Particulate
-     OM1_CZ(k)  = ZegC(1) + ZunC(1) + ZmortC_tot + OM1_Ratio(k)*ZslopC_tot !  (mmol-C/m3/d)
-     OM1_NZ(k)  = ZegN(1) + ZunN(1) + ZmortN_tot + OM1_Ratio(k)*ZslopN_tot !  (mmol-N/m3/d)
-     OM1_PZ(k)  = ZegP(1) + ZunP(1) + ZmortP_tot + OM1_Ratio(k)*ZslopP_tot !  (mmol-P/m3/d)
+     OM1_CZ(k)  = ZegC(k,1) + ZunC(k,1) + ZmortC_tot(k) + OM1_Ratio(k)*ZslopC_tot(k) !  (mmol-C/m3/d)
+     OM1_NZ(k)  = ZegN(k,1) + ZunN(k,1) + ZmortN_tot(k) + OM1_Ratio(k)*ZslopN_tot(k) !  (mmol-N/m3/d)
+     OM1_PZ(k)  = ZegP(k,1) + ZunP(k,1) + ZmortP_tot(k) + OM1_Ratio(k)*ZslopP_tot(k) !  (mmol-P/m3/d)
                                                                   ! Dissolved
-     OM2_CZ(k)  = ZegC(2) + ZunC(2) + OM2_Ratio(k)*ZslopC_tot              !  (mmol-C/m3/d)
-     OM2_NZ(k)  = ZegN(2) + ZunN(2) + OM2_Ratio(k)*ZslopN_tot              !  (mmol-N/m3/d)
-     OM2_PZ(k)  = ZegP(2) + ZunP(2) + OM2_Ratio(k)*ZslopP_tot              !  (mmol-P/m3/d)
+     OM2_CZ(k)  = ZegC(k,2) + ZunC(k,2) + OM2_Ratio(k)*ZslopC_tot(k)              !  (mmol-C/m3/d)
+     OM2_NZ(k)  = ZegN(k,2) + ZunN(k,2) + OM2_Ratio(k)*ZslopN_tot(k)              !  (mmol-N/m3/d)
+     OM2_PZ(k)  = ZegP(k,2) + ZunP(k,2) + OM2_Ratio(k)*ZslopP_tot(k)              !  (mmol-P/m3/d)
 
     else 
-
                                                                   ! Particulate
-     OM1_CZ(k)  = ZegC(1) + ZunC(1) + ZmortC_tot + OM1_Ratio(k)*ZslopC_tot !  (mmol-C/m3/d)
-     OM1_NZ(k)  = ZegN(1) + ZunN(1) + ZmortN_tot + OM1_Ratio(k)*ZslopN_tot !  (mmol-N/m3/d)
-     OM1_PZ(k)  = ZegP(1) + ZunP(1) + ZmortP_tot + OM1_Ratio(k)*ZslopP_tot !  (mmol-P/m3/d)
+     OM1_CZ(k)  = ZegC(k,1) + ZunC(k,1) + ZmortC_tot(k) + OM1_Ratio(k)*ZslopC_tot(k) !  (mmol-C/m3/d)
+     OM1_NZ(k)  = ZegN(k,1) + ZunN(k,1) + ZmortN_tot(k) + OM1_Ratio(k)*ZslopN_tot(k) !  (mmol-N/m3/d)
+     OM1_PZ(k)  = ZegP(k,1) + ZunP(k,1) + ZmortP_tot(k) + OM1_Ratio(k)*ZslopP_tot(k) !  (mmol-P/m3/d)
                                                                   ! Dissolved
-     OM2_CZ(k)  = SUM(ZegC(2:nospZ)) + SUM(ZunC(2:nospZ)) + OM2_Ratio(k)*ZslopC_tot              !  (mmol-C/m3/d)
-     OM2_NZ(k)  = SUM(ZegN(2:nospZ)) + SUM(ZunN(2:nospZ)) + OM2_Ratio(k)*ZslopN_tot              !  (mmol-N/m3/d)
-     OM2_PZ(k)  = SUM(ZegP(2:nospZ)) + SUM(ZunP(2:nospZ)) + OM2_Ratio(k)*ZslopP_tot              !  (mmol-P/m3/d)
+     OM2_CZ(k)  = SUM(ZegC(k,2:nospZ)) + SUM(ZunC(k,2:nospZ)) + OM2_Ratio(k)*ZslopC_tot(k)              !  (mmol-C/m3/d)
+     OM2_NZ(k)  = SUM(ZegN(k,2:nospZ)) + SUM(ZunN(k,2:nospZ)) + OM2_Ratio(k)*ZslopN_tot(k)              !  (mmol-N/m3/d)
+     OM2_PZ(k)  = SUM(ZegP(k,2:nospZ)) + SUM(ZunP(k,2:nospZ)) + OM2_Ratio(k)*ZslopP_tot(k)              !  (mmol-P/m3/d)
 
     endif
 
@@ -875,15 +914,15 @@ enddo !end k loop
 !--------------------------------
 !-NH4; Ammonium (mmol-N/m3)
   ff_new(:,iNH4) = ff(:,iNH4)                            &
-  & + ( RNH4(:) - AupN(:)*NH4(:)/(Ntotal(:)) + AexudN(:) + sumZexN(:)  )*dTd
+  & + ( RNH4(:) - AupN(:)*NH4(:)/(Ntotal(:)) + AexudN(:) + ZexN_tot(:)  )*dTd
 !----------------------------
 !-Silica: (mmol-Si/m3)
   ff_new(:,iSi) =  Si(:)                             &
-  & + ( RSi(:) - AupSi(:) + sumZegSi(:) + sumZunSi(:) )*dTd
+  & + ( RSi(:) - AupSi(:) + ZegSi_tot(:) + ZunSi_tot(:) )*dTd
 !---------------------------------------------
 !-PO4: Phosphate (mmol-P/m3)
  ff_new(:,iPO4) = PO4(:)                             &
- & + ( RPO4(:) - AupP(:) + AexudP(:) + sumZexP(:)  )*dTd
+ & + ( RPO4(:) - AupP(:) + AexudP(:) + ZexP_tot(:)  )*dTd
 
 !---------------------------------------------------------
 !-DIC: Dissolved Inorganic Carbon (mmol-C/m3)
@@ -896,12 +935,15 @@ enddo !end k loop
 !-----------------------------------------
 !-OM1_A: (mmol-C/m3-- Dead Phytoplankton Particulate)
   ff_new(:,iOM1_A) = OM1A(:) + (ROM1_A(:) + OM1_CA(:))*dTd
+
 !-----------------------------------------------
 !-OM2_A: (mmol-C/m3-- Dead Phytoplankton Dissolved)
   ff_new(:,iOM2_A) = OM2A(:) + (ROM2_A(:) + OM2_CA(:))*dTd
+
 !-----------------------------------------------
 !-OM1_Z:(mmol-C/m3--G particulate)
   ff_new(:,iOM1_Z) = OM1Z(:) + (ROM1_Z(:) + OM1_CZ(:))*dTd
+
 !-----------------------------------------------
 !-OM2_Z:(mmol-C/m3--G dissolved)
   ff_new(:,iOM2_Z) = OM2Z(:) + (ROM2_Z(:) + OM2_CZ(:))*dTd
@@ -917,6 +959,39 @@ enddo !end k loop
 !---------------------------------------------------------------------
 !-OM2_BC: (mmol-C/m3--initial and boundary condition OM dissolved)
   ff_new(:,iOM2_BC) = OM2BC(:) + ROM2_BC(:)*dTd
+
+  if(inea.eq.10.and.debug.eq.1) then
+    write(6,*) "NO3,NO3new,RNO3,AupN,Ntotal" 
+    write(6,'(*(g0,:,", "))') NO3(1),ff_new(1,iNO3),RNO3(1),AupN(1),Ntotal(1)
+    write(6,*) "NH4,NH4new,RNH4,AupN,AexudN,ZexN_tot"
+    write(6,'(*(g0,:,", "))') NH4(1),ff_new(1,iNH4),RNH4(1),AupN(1),AexudN(1),ZexN_tot(1)
+    write(6,*) "Si,Sinew,RSi,AupSi,ZegSi_tot,ZunSi_tot"
+    write(6,'(*(g0,:,", "))') Si(1),ff_new(1,iSi),RSi(1),AupSi(1),ZegSi_tot(1),ZunSi_tot(1)
+    write(6,*) "PO4,PO4new,RPO4,AupP,AexudP,ZexP_tot"
+    write(6,'(*(g0,:,", "))') PO4(1),ff_new(1,iPO4),RPO4(1),AupP(1),AexudP(1),ZexP_tot(1)
+    write(6,*) "DIC,DICnew,RDIC,PrimProd,ArespC,ZrespC"
+    write(6,'(*(g0,:,", "))') DIC(1),ff_new(1,iDIC),RDIC(1),PrimProd(1),ArespC(1),ZrespC(1)
+    write(6,*) "O2,O2new,RO2"
+    write(6,'(*(g0,:,", "))') O2(1),ff_new(1,iO2),RO2(1)
+    write(6,*) "OM1A,OM1A_new,ROM1A,OM1_CA"
+    write(6,'(*(g0,:,", "))') OM1A(1),ff_new(1,iOM1_A),ROM1_A(1),OM1_CA(1)
+    write(6,*) "OM2A,OM2A_new,ROM2A,OM1_CA"
+    write(6,'(*(g0,:,", "))') OM2A(1),ff_new(1,iOM2_A),ROM2_A(1),OM2_CA(1)
+    write(6,*) "OM1Z,OM1Z_new,ROM1Z,OM1_CZ"
+    write(6,'(*(g0,:,", "))') OM1Z(1),ff_new(1,iOM1_Z),ROM1_Z(1),OM1_CZ(1)
+    write(6,*) "OM2Z,OM2Z_new,ROM2Z,OM2_CZ"
+    write(6,'(*(g0,:,", "))') OM2Z(1),ff_new(1,iOM2_Z),ROM2_Z(1),OM2_CZ(1)
+    write(6,*) "OM1R,OM1R_new,ROM1R"
+    write(6,'(*(g0,:,", "))') OM1R(1),ff_new(1,iOM1_R),ROM1_R(1)
+    write(6,*) "OM2R,OM2R_new,ROM2R"
+    write(6,'(*(g0,:,", "))') OM2R(1),ff_new(1,iOM2_R),ROM2_R(1)
+    write(6,*) "OM1BC,OM1BC_new,ROM1BC"
+    write(6,'(*(g0,:,", "))') OM1BC(1),ff_new(1,iOM1_BC),ROM1_BC(1)
+    write(6,*) "OM2BC,OM2BC_new,ROM2BC"
+    write(6,'(*(g0,:,", "))') OM2BC(1),ff_new(1,iOM2_BC),ROM2_BC(1)
+  endif
+
+
 !---------------------------------------------------------------------
 !-CDOM: (ppb) 
   ff_new(:,iCDOM) =  CDOM(:)*(1.0 - KGcdom*dTd)
@@ -942,9 +1017,12 @@ enddo
 
   !Write csv files
   k=1
-  if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
+    if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
+    write(6201,'(*(g0,:,", "))') ff_new(k,iA(1)),ff_new(k,iQn(1)),ff_new(k,iQp(1)),ff_new(k,iZ(1)),ff_new(k,iZ(2)),ff_new(k,iNO3),ff_new(k,iNH4),ff_new(k,iPO4),ff_new(k,iDIC),ff_new(k,iO2),ff_new(k,iOM1_A),ff_new(k,iOM2_A),ff_new(k,iOM1_Z),ff_new(k,iOM2_Z),ff_new(k,iOM1_R),ff_new(k,iOM2_R),ff_new(k,iCDOM),ff_new(k,iSi),ff_new(k,iOM1_BC),ff_new(k,iOM2_BC),ff_new(k,iAlk),ff_new(k,isx1A),ff_new(k,isy1A),ff_new(k,isx2A),ff_new(k,isy2A),ff_new(k,isx1Z),ff_new(k,isy1Z),ff_new(k,isx2Z),ff_new(k,isy2Z)
     write(6301,'(*(g0,:,", "))') TC_8,rad,wind,S(k),T(k)
     write(6401,'(*(g0,:,", "))') PARsurf,PARdepth,PARbot
+    write(6501,'(*(g0,:,", "))') Z(k,1),Zgrow(k,1),Zresp(k,1),Zmort(k,1),ZgrazA_tot(k,1),ZgrazC(k,1),ZgrazP(k,1)
+    write(6501,'(*(g0,:,", "))') Z(k,2),Zgrow(k,2),Zresp(k,2),Zmort(k,2),ZgrazA_tot(k,2),ZgrazC(k,2),ZgrazP(k,2)
   endif
 
   !! Before Advection and VMixing, combine A's and Q's
