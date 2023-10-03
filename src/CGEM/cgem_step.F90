@@ -187,14 +187,11 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
      open(unit=6201,file="cgem.csv")
      open(unit=6301,file="hydro.csv")
      open(unit=6401,file="light.csv")
-     open(unit=6501,file="zoo.csv")
-     open(unit=6601,file="uptake.csv")
      write(6001,'(A58)') "Agrow,Aresp,uA,uN,uP,uE,uSi,f_E,f_N,f_P,f_Si,Tadj,A,min_S"
     write(6101,'(A314)') "RO2,RNO3,RNH4,RPO4,RDIC,RSi,RALK,RN2,ROM1_A,ROM2_A,RO2_A,RNO3_A,RPO4_A,RDIC_A,RNH4_A,RSi_A,RALK_A,RN2_A,ROM1_Z,ROM2_Z,RO2_Z,RNO3_Z,RPO4_Z,RDIC_Z,RNH4_Z,RSi_Z,RALK_Z,RN2_Z,ROM1_R,ROM2_R,RO2_R,RNO3_R,RPO4_R,RDIC_R,RNH4_R,RSi_R,RALK_R,RN2_R,ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC"
     write(6201,'(A132)') "A1,Qn1,Qp1,Z1,Z2,NO3,NH4,PO4,DIC,O2,OM1A,OM2A,OM1Z,OM2Z,OM1R,OM2R,CDOM,Si,OM1BC,OM2BC,Alk,sx1A,sy1A,sx2A,sy2A,sx1Z,sy1Z,sx2Z,sy2Z"
     write(6301,'(A22)') "TC_8,rad,wind,sal,temp"
     write(6401,'(A45)') "ksurf,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,kbot"
-    write(6501,'(A50)') "Z,Zgrow,Zresp,Zmort,ZgrazA_tot,ZgrazC,ZgrazP"
     endif
 
 
@@ -221,16 +218,6 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
         Z(:,isz) = ff(:,iZ(isz))
        enddo
 
-       !! After Advection and VMixing, return to stoich's
-        sx1A(:) = ff(:,isx1A) / ff(:,iOM1_A)
-        sy1A(:) = ff(:,isy1A) / ff(:,iOM1_A)
-        sx2A(:) = ff(:,isx2A) / ff(:,iOM2_A)
-        sy2A(:) = ff(:,isy2A) / ff(:,iOM2_A)
-        sx1Z(:) = ff(:,isx1Z) / ff(:,iOM1_Z)
-        sy1Z(:) = ff(:,isy1Z) / ff(:,iOM1_Z)
-        sx2Z(:) = ff(:,isx2Z) / ff(:,iOM2_Z)
-        sy2Z(:) = ff(:,isy2Z) / ff(:,iOM2_Z)
-
        do isz=1,nospZ
         Z(:,isz) = ff(:,iZ(isz))
        enddo
@@ -253,6 +240,15 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
        ALK(:)   = ff(:,iALK)
        Ntotal(:)    = NO3(:) + NH4(:)
 
+       !! After Advection and VMixing, return to stoich's
+        sx1A(:) = ff(:,isx1A) / OM1A(:)
+        sy1A(:) = ff(:,isy1A) / OM1A(:)
+        sx2A(:) = ff(:,isx2A) / OM2A(:)
+        sy2A(:) = ff(:,isy2A) / OM2A(:)
+        sx1Z(:) = ff(:,isx1Z) / OM1Z(:)
+        sy1Z(:) = ff(:,isy1Z) / OM1Z(:)
+        sx2Z(:) = ff(:,isx2Z) / OM2Z(:)
+        sy2Z(:) = ff(:,isy2Z) / OM2Z(:)
 
 !-----------------------------------------------------------------
 !   Begin biogeochemistry calculations at time-level istep
@@ -411,10 +407,10 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
 
 !! ----------------------------------------------------------------------
 !! Sum over phytoplankton groups for PrimProd, ArespC, AexudN, AexudP
-   do isp = 1, nospA
-     AupN(:) = SUM(A(:,isp)*vN(:,isp))     ! Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
-     AupP(:) = SUM(A(:,isp)*vP(:,isp))     ! Phytoplankton uptake of Phosphorus (mmol-P/m3/d)
-     AupSi(:) = SUM(A(:,isp)*vSi(:,isp))  ! Phytoplankton uptake of Silica (mmol-Si/m3/d)
+   do k = 1, km 
+     AupN(k) = SUM(A(k,:)*vN(k,:))     ! Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
+     AupP(k) = SUM(A(k,:)*vP(k,:))     ! Phytoplankton uptake of Phosphorus (mmol-P/m3/d)
+     AupSi(k) = SUM(A(k,:)*vSi(k,:))  ! Phytoplankton uptake of Silica (mmol-Si/m3/d)
    enddo
   if(inea.eq.10.and.debug.eq.1) then
     write(6,*) "AupN,AupP,AupSi"
@@ -497,18 +493,6 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
   endif
 !----------------------------------------------------------------------- 
 
-
-!---
-!A.2-A4 Z: Zooplankton (individuals/m3) 
-!    dZ_j/dt = Zgrow_j - Zresp_j - Zmort_j 
-!    growth - respiration - mortality
-
-  !Zgrow_j - zooplankton growth rates (individuals/m3/d)
-  !   Zgrow_j = (func_T) * min(ZinN_j/zQn_j,ZinP_j/ZQp_j)
-  !    ZinN_j = ZgrazN_j - Zslop_j - ZunN_j
-  !  ZgrazN_j = Sum_i(ZgrazA_ij*Qn_i)
-  ! ZslopN_j  = Zslop*ZgrazN_k
-  ! ZunN_j = (1-Zeffic_j) * (ZgrazN_j - ZslopN_j)
 
 !----------------------------------------------------------------------
 ! ZgrazC, ZgrazN, and ZgrazP are total carbon, nitrogen, and phosphorus
@@ -1007,7 +991,7 @@ enddo !end k loop
 do k=1,km
   do isp = iNO3,nf
     if(ff_new(k,isp).le.0.) then
-      write(6,*) "ff_new.le.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff_new(k,isp)
+      write(6,*) "ff_new.le.0! set to 0 for istep,inea,k,isp=",istep,inea,k,isp,ff_new(k,isp)
       ff_new(k,isp) = 0.0
     endif
   enddo
@@ -1021,8 +1005,6 @@ enddo
     write(6201,'(*(g0,:,", "))') ff_new(k,iA(1)),ff_new(k,iQn(1)),ff_new(k,iQp(1)),ff_new(k,iZ(1)),ff_new(k,iZ(2)),ff_new(k,iNO3),ff_new(k,iNH4),ff_new(k,iPO4),ff_new(k,iDIC),ff_new(k,iO2),ff_new(k,iOM1_A),ff_new(k,iOM2_A),ff_new(k,iOM1_Z),ff_new(k,iOM2_Z),ff_new(k,iOM1_R),ff_new(k,iOM2_R),ff_new(k,iCDOM),ff_new(k,iSi),ff_new(k,iOM1_BC),ff_new(k,iOM2_BC),ff_new(k,iAlk),ff_new(k,isx1A),ff_new(k,isy1A),ff_new(k,isx2A),ff_new(k,isy2A),ff_new(k,isx1Z),ff_new(k,isy1Z),ff_new(k,isx2Z),ff_new(k,isy2Z)
     write(6301,'(*(g0,:,", "))') TC_8,rad,wind,S(k),T(k)
     write(6401,'(*(g0,:,", "))') PARsurf,PARdepth,PARbot
-    write(6501,'(*(g0,:,", "))') Z(k,1),Zgrow(k,1),Zresp(k,1),Zmort(k,1),ZgrazA_tot(k,1),ZgrazC(k,1),ZgrazP(k,1)
-    write(6501,'(*(g0,:,", "))') Z(k,2),Zgrow(k,2),Zresp(k,2),Zmort(k,2),ZgrazA_tot(k,2),ZgrazC(k,2),ZgrazP(k,2)
   endif
 
   !! Before Advection and VMixing, combine A's and Q's
