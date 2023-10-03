@@ -188,7 +188,7 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
      open(unit=6301,file="hydro.csv")
      open(unit=6401,file="light.csv")
      write(6001,'(A58)') "Agrow,Aresp,uA,uN,uP,uE,uSi,f_E,f_N,f_P,f_Si,Tadj,A,min_S"
-    write(6101,'(A314)') "RO2,RNO3,RNH4,RPO4,RDIC,RSi,RALK,RN2,ROM1_A,ROM2_A,RO2_A,RNO3_A,RPO4_A,RDIC_A,RNH4_A,RSi_A,RALK_A,RN2_A,ROM1_Z,ROM2_Z,RO2_Z,RNO3_Z,RPO4_Z,RDIC_Z,RNH4_Z,RSi_Z,RALK_Z,RN2_Z,ROM1_R,ROM2_R,RO2_R,RNO3_R,RPO4_R,RDIC_R,RNH4_R,RSi_R,RALK_R,RN2_R,ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC"
+    write(6101,'(A319)') "RO2,RNO3,RNH4,RPO4,RDIC,RSi,RALK,RN2,ROM1_A,ROM2_A,RO2_A,RNO3_A,RPO4_A,RDIC_A,RNH4_A,RSi_A,RALK_A,RN2_A,ROM1_Z,ROM2_Z,RO2_Z,RNO3_Z,RPO4_Z,RDIC_Z,RNH4_Z,RSi_Z,RALK_Z,RN2_Z,ROM1_R,ROM2_R,RO2_R,RNO3_R,RPO4_R,RDIC_R,RNH4_R,RSi_R,RALK_R,RN2_R,ROM1_BC,ROM2_BC,RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC,R_11"
     write(6201,'(A132)') "A1,Qn1,Qp1,Z1,Z2,NO3,NH4,PO4,DIC,O2,OM1A,OM2A,OM1Z,OM2Z,OM1R,OM2R,CDOM,Si,OM1BC,OM2BC,Alk,sx1A,sy1A,sx2A,sy2A,sx1Z,sy1Z,sx2Z,sy2Z"
     write(6301,'(A22)') "TC_8,rad,wind,sal,temp"
     write(6401,'(A45)') "ksurf,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,kbot"
@@ -328,13 +328,16 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
 
 
 !! Sum over phytoplankton groups for PrimProd, ArespC, AexudN, AexudP
-   do isp = 1, nospA
-     PrimProd(:) = SUM(Agrow(:,isp)*Qc(isp))    ! Phytoplankton primary production (mmol-C/m3/d)
-     ArespC(:)   = SUM(Aresp(:,isp)*Qc(isp))     ! Phytoplankton respiration     (mmol-C/m3/d)
-     AexudN(:)   = SUM(Aresp(:,isp)*Qn(:,isp))   ! Total Phytoplankton exudation (mmol-N/m3/d)
-     AexudP(:)   = SUM(Aresp(:,isp)*Qp(:,isp))   ! Total Phytoplankton exudation (mmol-P/m3/d)
-     Amort(:,isp)  = A(:,isp) * mA(isp)                         ! Dead phytoplankton (cells/m3/d)
-     enddo
+   do k = 1,km 
+     PrimProd(k) = SUM(Agrow(k,:)*Qc(:))    ! Phytoplankton primary production (mmol-C/m3/d)
+     ArespC(k)   = SUM(Aresp(k,:)*Qc(:))     ! Phytoplankton respiration     (mmol-C/m3/d)
+     AexudN(k)   = SUM(Aresp(k,:)*Qn(k,:))   ! Total Phytoplankton exudation (mmol-N/m3/d)
+     AexudP(k)   = SUM(Aresp(k,:)*Qp(k,:))   ! Total Phytoplankton exudation (mmol-P/m3/d)
+   enddo
+
+   do isp=1,nospA
+   Amort(:,isp)  = A(:,isp) * mA(isp)                         ! Dead phytoplankton (cells/m3/d)
+   enddo
 
   if(inea.eq.10.and.debug.eq.1) then
     write(6,*) "PrimProd,ArespC,AexudN,AexudP,Amort"
@@ -425,11 +428,11 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
     enddo
   enddo
 
-   do isp = 1,nospA
     do isz = 1,nospZ
-      ZgrazC(:,isz) = ZgrazA(:,isp,isz) * Qc(isp)     ! Carbon uptake from grazing (mmol-C/m3/day)
-      ZgrazN(:,isz) = ZgrazA(:,isp,isz) * Qn(:,isp)   ! Nitrogen uptake from grazing( mmol-N/m3/day)
-      ZgrazP(:,isz) = ZgrazA(:,isp,isz) * Qp(:,isp)   ! Phosphorus uptake from grazing (mmol-P/m3/day)
+    do k=1,km
+      ZgrazC(k,isz) = SUM(ZgrazA(k,:,isz) * Qc(:))     ! Carbon uptake from grazing (mmol-C/m3/day)
+      ZgrazN(k,isz) = SUM(ZgrazA(k,:,isz) * Qn(k,:))  ! Nitrogen uptake from grazing( mmol-N/m3/day)
+      ZgrazP(k,isz) = SUM(ZgrazA(k,:,isz) * Qp(k,:)) ! Phosphorus uptake from grazing (mmol-P/m3/day)
     enddo
    enddo
 
@@ -504,7 +507,7 @@ do isz=1,nospZ
 !-------------------------------------------------------------------
   ZslopC(:,isz)  = Zslop(isz)*ZgrazC(:,isz)                      ! Sloppy feeding (mmol-C/m3/d)
   ZunC(:,isz)    = (1.-Zeffic(isz))*(ZgrazC(:,isz)-ZslopC(:,isz))    ! Unassimilated (mmol-C/m3/d)
-  ZinC(:,isz)    = ZgrazC(k,isz) - ZslopC(:,isz) - ZunC(:,isz)         ! Ingested (mmol-C/m3/d)
+  ZinC(:,isz)    = ZgrazC(:,isz) - ZslopC(:,isz) - ZunC(:,isz)         ! Ingested (mmol-C/m3/d)
 
   ZslopN(:,isz)  = Zslop(isz)*ZgrazN(:,isz)                      ! Sloppy feeding (mmol-N/m3/d)
   ZunN(:,isz)    = (1.-Zeffic(isz))*(ZgrazN(:,isz)-ZslopN(:,isz)) ! Unassimilated (mmol-N/m3/d)
@@ -557,6 +560,7 @@ enddo !k
           ZegC(k,isz) = 0.
           !ZegN(isz) = 0.
           !ZegP(isz) = 0.
+          write(6,*) "ZegC,ZegN,ZegP",ZegC(k,isz),ZegN(k,isz),ZegP(k,isz)
       endif
     enddo 
   enddo
@@ -761,7 +765,7 @@ if(writecsv==1.and.k.eq.1.and.inea.eq.10) then
     & ROM1_A(k), ROM2_A(k), RO2_A, RNO3_A, RPO4_A, RDIC_A, RNH4_A, RSi_A, RALK_A, RN2_A, &
     & ROM1_Z(k), ROM2_Z(k), RO2_Z, RNO3_Z, RPO4_Z, RDIC_Z, RNH4_Z, RSi_Z, RALK_Z, RN2_Z, &
     & ROM1_R(k), ROM2_R(k), RO2_R, RNO3_R, RPO4_R, RDIC_R, RNH4_R, RSi_R, RALK_R, RN2_R, &
-    & ROM1_BC(k),ROM2_BC(k),RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC
+    & ROM1_BC(k),ROM2_BC(k),RO2_BC,RNO3_BC,RPO4_BC,RDIC_BC,RNH4_BC,RSi_BC,RALK_BC,RN2_BC,R_11
 endif
 
 !
@@ -830,8 +834,8 @@ write(6,*) "In cgem, finished stoich OM2A"
 
 
 !!-- Organic Matter from fecal pellets ---------------------------------
-    OM1_Ratio(k) = SUM( (Qn(k,:)-QminN)/Qn(k,:)*A(k,:))/SUM(A(k,:))
-    OM2_Ratio(k) = SUM( (QminN/Qn(k,:))*A(k,:))/SUM(A(k,:))
+    OM1_Ratio(k) = SUM( (Qn(k,:)-QminN(:))/Qn(k,:)*A(k,:))/SUM(A(k,:))
+    OM2_Ratio(k) = SUM( (QminN(:)/Qn(k,:))*A(k,:))/SUM(A(k,:))
 
 #ifdef DEBUG
 write(6,*) "In cgem, OM1,2 Ratio=",OM1_Ratio,OM2_Ratio
