@@ -96,7 +96,7 @@ subroutine cgem_run(istep,myrank)
 
   !This will write Wind/Rad for every single timestep, don't run for long or
   !the resulting text file will be enormous.
-  if(myrank.eq.1.and.i.eq.1.and.checkwindrad.eq.1) write(6,*) "Wind,Rad,Minutes",Wind,Rad/cv,istep,istep*int(dt)/60./60.
+  if(myrank.eq.1.and.i.eq.1.and.checkwindrad.eq.1) write(16,*) "Wind,Rad,Minutes",Wind,Rad/cv,istep,istep*int(dt)/60./60.
 
 !The option to skip cgem is for verifying initial and boundary conditions,
 !  sinking, and loading without cgem complicating the process 

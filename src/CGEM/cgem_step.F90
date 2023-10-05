@@ -580,6 +580,7 @@ enddo !k
   enddo
 
   do k=1,km
+    ZrespC(k) = SUM(Zresp(k,:)*ZQc(:))
     ZegSi_tot(k) = SUM(ZegSi(k,:))
     ZunSi_tot(k) = SUM(ZunSi(k,:))
     ZexN_tot(k) = SUM(ZexN(k,:))
