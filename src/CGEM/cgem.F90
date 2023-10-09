@@ -20,6 +20,7 @@ real :: eps
 
 !Sinking
 real, dimension(:), allocatable :: ws
+real, dimension(:), allocatable :: fmin
 
 !Stoichiometry: keep these as state variables
 !real, dimension(:,:), allocatable :: s_x1A,s_y1A,s_z1A
@@ -662,6 +663,8 @@ if(ierr.ne.0) write(6,*) "error in allocating:Ea"
 !Sinking
 allocate(ws(nf),stat=ierr)
 if(ierr.ne.0) write(6,*) "error in allocating:ws"
+allocate(fmin(nf),stat=ierr)
+if(ierr.ne.0) write(6,*) "error in allocating:fmin"
 
 !pH
   allocate(pH(km),stat=ierr)
@@ -752,10 +755,14 @@ write(6,*) "After Esed",s_z2Z
 #endif
 
 ws = 0.
+fmin = 1.e-8 
 ws(iA(:))=sinkA(:)
+fmin(iA(:)) = 1.
 !We didn't do this before, but we should have...
 ws(iQn(:)) = sinkA(:)
 ws(iQp(:)) = sinkA(:)
+fmin(iQn(:)) = QminN(:)
+fmin(iZ(:)) = 1.
 
 #ifdef DEBUG
 write(6,*) "ws(ia)",ws(iA(:))
@@ -798,11 +805,8 @@ write(6,*) "ws",ws
 #endif
 
 
-!Convert to negative per seconds
-!ws = -ws / 86400.
-!For SCHISM, should be positive
+!Convert per m/d to negative m/s 
 ws = ws / 86400.
-
 
 #ifdef DEBUG
 write(6,*) "ff(1)",ff(:,1)

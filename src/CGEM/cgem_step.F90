@@ -198,7 +198,7 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
   do isp = 1,nf
     do k=1,km
       if(ff(k,isp).le.0.) then
-        write(6,*) "ff.le.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff(k,isp)
+        !write(6,*) "ff.le.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff(k,isp)
         ff(k,isp) = 0.0
       endif
     enddo
@@ -996,7 +996,7 @@ enddo !end k loop
 do k=1,km
   do isp = iNO3,nf
     if(ff_new(k,isp).le.0.) then
-      write(6,*) "ff_new.le.0! set to 0 for istep,inea,k,isp=",istep,inea,k,isp,ff_new(k,isp)
+      !write(6,*) "ff_new.le.0! set to 0 for istep,inea,k,isp=",istep,inea,k,isp,ff_new(k,isp)
       ff_new(k,isp) = 0.0
     endif
   enddo

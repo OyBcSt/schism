@@ -6,7 +6,7 @@
 !==============================================================================
 subroutine cgem_run(istep,myrank)
   use schism_glbl, only : rkind,nea,idry_e,irange_tr,flx_sf,flx_bt,bdy_frc,&
-   & nvrt,kbe,tr_el,dt,srad,elnode,i34,windx,windy,area,ze,wsett
+   & nvrt,kbe,dpe,tr_el,dt,srad,elnode,i34,windx,windy,area,ze,wsett
   use grid, only : T,S,km,dz,Vol,d,d_sfc,START_SECONDS,Wind,Rad
   use cgem, only: ws,ff,ff_new,skipcgem,checkwindrad
 
@@ -14,13 +14,14 @@ subroutine cgem_run(istep,myrank)
 
   integer, intent(in) :: istep,myrank
   integer :: itmp1,itmp2,i,m,im,mm,k,TC_8
+  logical :: dowrite 
   real :: cgemdt
+  real, dimension(km) :: cgemarea
   real, parameter :: cv        = 2.77e14 ! multiplicative factor used
                                              ! to convert from watts/m2 
                                              ! to photons/cm2/sec
                                              ! Morel and Smith (1974)
-  external :: cgem_step, cgem_flux
-
+  external :: cgem_step, cgem_flux, cgem_sink
                                              
 !Just say Hi in mirror.out
   if(myrank==0) write(16,*) "In cgem_run: istep,dt=",istep,dt
@@ -48,7 +49,6 @@ subroutine cgem_run(istep,myrank)
     flx_bt(itmp1:itmp2,i)=0.d0
     bdy_frc(itmp1:itmp2,:,i)=0.d0
 
-  !Define settling vel in internal prisms (positive downward)
 
     !--Since this is constant, I'd rather define it somewhere else, but
     !- it was not registering properly.  I'll get back to this.
@@ -58,6 +58,7 @@ subroutine cgem_run(istep,myrank)
       wsett(m,:,i)= ws(mm) !ws(nf) is cgem sinking array
       mm = mm+1
     enddo
+
 
   !Set cgem state variable array, ff, to tracer variables (tr_el) that schism 
   !  has 'transported' for us. 
@@ -78,6 +79,7 @@ subroutine cgem_run(istep,myrank)
       S(im)= tr_el(2,k,i)
       dz(im) = ze(k,i)-ze(k-1,i)
       Vol(im) = (ze(k,i)-ze(k-1,i))*area(i)
+      cgemarea(im) = area(i)
       im = im-1
     enddo
 
@@ -110,7 +112,12 @@ else
   !Set surface and bottom fluxes
   !Input is ff_new, output is ff_new
   call cgem_flux(cgemdt)
+  !Sinking, ff_new in, ff_new out
+  !dowrite=.FALSE.
+  !if(i.eq.10.and.myrank.eq.1) dowrite=.TRUE.
+  !call cgem_sink(cgemdt,cgemarea,dowrite)
 endif 
+
 
 !Update schism tracer variables with newly calculated cgem variables
     mm = 1
