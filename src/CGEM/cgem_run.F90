@@ -111,7 +111,7 @@ else
   call cgem_step(TC_8,cgemdt,istep,i,myrank)
   !Set surface and bottom fluxes
   !Input is ff_new, output is ff_new
-  call cgem_flux(cgemdt)
+  !Call inside cgem_step !!call cgem_flux(cgemdt)
   !Sinking, ff_new in, ff_new out
   !dowrite=.FALSE.
   !if(i.eq.10.and.myrank.eq.1) dowrite=.TRUE.

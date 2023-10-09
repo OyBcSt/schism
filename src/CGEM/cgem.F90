@@ -18,6 +18,9 @@ integer :: nospZ
 integer :: skipcgem,checkwindrad,writecsv,debug
 real :: eps
 
+!constants
+real, parameter :: SDay = 86400.
+
 !Sinking
 real, dimension(:), allocatable :: ws
 real, dimension(:), allocatable :: fmin
@@ -49,9 +52,9 @@ integer, parameter :: i_Si      = 9 !Silica (SA, SRP) Fluxes
 ! Terms for Flux Calculations
 ! =========================================================
        REAL :: Esed
-       REAL :: CBODW
+       REAL :: CBODW,CBODS
+       REAL :: dT_sed
        REAL,ALLOCATABLE :: pH(:)
-
 
 !---------------------------------------------------------      
 !-A; Phytoplankton number density (cells/m3);
@@ -320,6 +323,7 @@ subroutine cgem_read
   !http://degenerateconic.com/namelist-error-checking.html
   namelist /switches/ Which_fluxes,Which_temperature,Which_uptake,Which_quota,Which_irradiance,&
     Which_photosynthesis,Which_growth,Which_wind,Which_rad
+  namelist /sdm/ dT_sed
   namelist /optics/ Kw,Kcdom,Kspm,Kchla,astar490,aw490,astarOMA,astarOMZ,astarOMR,astarOMBC,PARfac,sinkCDOM
   namelist /temperature/ Tref,KTg1,KTg2,Ea
   namelist /phytoplankton/ umax,CChla,alpha,beta,respg,respb,QminN,QminP,QmaxN,QmaxP,Kn,Kp,Ksi,KQn,&
@@ -338,6 +342,16 @@ open(action='read',file='cgem.nml',iostat=istat,newunit=iunit)
 
 !namelist /switches/
 read(nml=switches,iostat=istat,unit=iunit)
+if (istat /= 0) then
+ backspace(iunit)
+ read(iunit,fmt='(A)') line
+ write(6,'(A)') &
+        'Invalid line in namelist: '//trim(line)
+ stop
+endif
+
+!namelist /switches/
+read(nml=sdm,iostat=istat,unit=iunit)
 if (istat /= 0) then
  backspace(iunit)
  read(iunit,fmt='(A)') line
@@ -748,6 +762,7 @@ enddo
 
 Esed = -9999.
 CBODW = -9999.
+CBODS = -9999.
 pH = -9999.
 
 #ifdef DEBUG
@@ -805,8 +820,9 @@ write(6,*) "ws",ws
 #endif
 
 
-!Convert per m/d to negative m/s 
-ws = ws / 86400.
+!Convert per m/d to m/s 
+ws = ws / SDay
+
 
 #ifdef DEBUG
 write(6,*) "ff(1)",ff(:,1)

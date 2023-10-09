@@ -1,19 +1,23 @@
-subroutine cgem_flux(dT)
+subroutine cgem_flux(dT,istep)
 
-use grid, only:T,S,dz,Wind
+use grid, only:T,S,dz,Wind,km
 !This is called after cgem_step, which returns ff_new
 !This modifies the surface and bottom cells of ff_new
-use cgem, only:ff_new,Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,pCO2,iALK,iSi,iPO4,pH
+use cgem, only:ff_new,Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,pCO2,iALK,iSi,iPO4,pH, &
+        & iSOC,CBODW,iA,Esed,iNO3,iNH4,iNutEx,iMPB,nospA,SDay,iSDM,dT_sed,&
+        & iOM1_A,iOM2_A,iOM1_Z,iOM2_Z,iOM1_R,iOM2_R,iOM1_BC,iOM2_BC
+use SDM
 use MOD_UTILITIES
 !from mocxy
 use gasx
 
 implicit none
 
+integer, intent(in) :: istep
 real, intent(in) :: dT
+integer :: nz
 real :: T_sfc, Sal_sfc, O2_sfc, Sc, Op_umole, rhow, Op, OsDOp
 real :: Vtrans, alpha_O2, O2_atF,zs, DIC_sfc, CO2_atF
-real, parameter :: SDay = 86400.0  ! # of sec in 24 hr day
 !------------------------------------------------------------------
 !Output vars for mocsy subroutine:
       real :: kw660(1), co2flux(1), co2ex(1), dpco2(1)
@@ -21,8 +25,18 @@ real, parameter :: SDay = 86400.0  ! # of sec in 24 hr day
       real :: omegac(1), betad_calc(1), rhosw(1), p(1), tempis(1)
       real :: patm(1) = 1., pco2_in(1)
       real :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
+!Bottom flux
+  real :: SOC, DICFlux,tau,O2Flux,NO3Flux,NH4Flux,PO4Flux,SiFlux,ALKFlux
+  real :: sedflux_iOM1_A,sedflux_iOM2_A,sedflux_iOM1_Z,sedflux_iOM2_Z
+  real :: sedflux_iOM1_BC,sedflux_iOM2_BC,sedflux_iOM1_R,sedflux_iOM2_R
+      !-- Convert quanta/cm2/s to mol photons/m2/d
+      !   N_Av=6.0221413E+23
+      !   quanta/cm2/s * 1 mol/N_av quanta * 10,000cm2/m2 * 86400s/d = mol/m2/d
+      real, parameter :: convert_I   = 1. / 6.0221413 * 8.64 * 1.e-15
+      integer :: nstep_sed
 
-
+nz = km
+nstep_sed = int(dT_sed / dT)  ! number of steps in-between calls to sediment diagenesis
 
 
 if(Which_fluxes(iO2surf).eq.1) then
@@ -117,6 +131,137 @@ elseif(Which_fluxes(iDICsurf).eq.2) then
 
 endif
 
-return
+!-- BOTTOM FLUXES -------------------------------------------------------------------------
+if(Which_fluxes(iSOC).eq.1) then
+!Murrell and Lehrter sediment oxygen consumption
+       SOC = - 0.0235*2.**(.1*T(nz))*ff_new(nz,iO2)
+               ff_new(nz,iO2) = AMAX1(ff_new(nz,iO2)  + SOC/  &
+     & dz(nz)*dT/SDay,0.)
+       DICFlux = (-3.7*log(AMAX1(ff_new(nz,iO2),1.e-8)) + 19.4)*SOC
+               ff_new(nz,iDIC) = AMAX1(ff_new(nz,iDIC) + DICFlux/  &
+     & dz(nz)*dT/SDay,0.)
+elseif(Which_fluxes(iSOC).eq.2.or.Which_fluxes(iSOC).eq.3) then
+!Justic and Wang sediment oxygen consumption
+     tau=0.
+     call JW_SOC(O2Flux,NH4Flux,PO4Flux,CBODW,ff_new(nz,iA(1):iA(nospA)),Esed,ff_new(nz,iO2), &
+       T(nz),tau)
+!O2
+               ff_new(nz,iO2) = AMAX1(ff_new(nz,iO2)    + O2Flux/  &
+     & dz(nz)*dT/SDay,0.)
+!NH4
+               ff_new(nz,iNH4) = AMAX1(ff_new(nz,iNH4)  + NH4Flux/  &
+     & dz(nz)*dT/SDay,0.)
+!PO4
+               ff_new(nz,iPO4) = AMAX1(ff_new(nz,iPO4)  + PO4Flux/  &
+     & dz(nz)*dT/SDay,0.)
+elseif(Which_fluxes(iSOC).eq.4) then
+!Meta Model
+     call Meta_SOC(ff_new(nz,:),T(nz),S(nz),dz(nz))
+endif
 
-end subroutine cgem_flux
+
+if(Which_fluxes(iNutEx).eq.1) then
+!NO3 Exchange
+       NO3Flux = 0.0057*ff_new(nz,iO2) - 0.52
+               ff_new(nz,iNO3) = AMAX1(ff_new(nz,iNO3) + NO3Flux/ &
+     & dz(nz)*dT/SDay,0.)
+
+!NH4 Exchange
+       NH4Flux = -1.55*NO3Flux + 0.69
+               ff_new(nz,iNH4) = AMAX1(ff_new(nz,iNH4) + NH4Flux/ &
+     & dz(nz)*dT/SDay,0.)
+
+!PO4 Exchange
+      PO4Flux = 0.094*NH4Flux - 0.0125
+               ff_new(nz,iPO4) = AMAX1(ff_new(nz,iPO4) + PO4Flux/ &
+     & dz(nz)*dT/SDay,0.)
+
+!Si Exchange
+      SiFlux = 1.68 
+               ff_new(nz,iSi)  = AMAX1(ff_new(nz,iSi)  + SiFlux/ &
+     & dz(nz)*dT/SDay,0.)
+
+!ALK Exchange
+      ALKFlux = NO3Flux - NH4Flux + PO4Flux
+               ff_new(nz,iALK)  = AMAX1(ff_new(nz,iALK)  + ALKFlux/ &
+     & dz(nz)*dT/SDay,0.)
+endif
+
+
+!MPB O2 Production
+if(Which_fluxes(iMPB).eq.1) then
+! Gatusso et al. 2006
+               ff_new(nz,iO2) = ff_new(nz,iO2) + 120.82*(1.-exp(-convert_I*Esed/2.09))/ &
+     & dz(nz)*dT/SDay
+elseif(Which_fluxes(iMPB).eq.2) then
+! Jahnke et al. 2008
+               ff_new(nz,iO2) = ff_new(nz,iO2) + 132./12.*convert_I*Esed**(1.45)/ &
+     & dz(nz)*dT/SDay
+elseif(Which_fluxes(iMPB).eq.3) then
+! Lehrter et al. (2014)
+               ff_new(nz,iO2) = ff_new(nz,iO2) + 0.33*convert_I*Esed**(2.93)/ &
+     & dz(nz)*dT/SDay
+endif
+
+
+ if (Which_Fluxes(iSDM) .eq. 1) then
+ 
+ ! Sediment Diagenesis Model
+ !        if(init.eq.1.or.mod(istep,288).eq.0) then  !Call every day, every 288 timesteps, assumes timestep = 5 min
+ !           call Sediment_Diagenesis_Flux(dT*288,f(i,j,nz,:),T(i,j,nz),S(i,j,nz),pH(i,j,nz),sedflux(i,j,:),s_x1A(i,j,nz),&
+     if (istep == 1 .OR. mod(istep,nstep_sed) == 0) then
+         call Sediment_Diagenesis_Flux(dT_sed, ff_new(nz,:), T(nz), S(nz), pH(nz), sedflux(:), &
+                                     & YY_init(:), pph_init(:) )
+     endif
+ 
+ !DIC Exchange
+                ff_new(nz,iDIC) = AMAX1(ff_new(nz,iDIC) - sedflux(sDIC)/dz(nz)*dT/SDay, 0.)
+ 
+ !NH4 Exchange
+                ff_new(nz,iNH4) = AMAX1(ff_new(nz,iNH4) - sedflux(sNH4)/dz(nz)*dT/SDay, 0.)
+ !NO3 Exchange
+                ff_new(nz,iNO3) = AMAX1(ff_new(nz,iNO3) - sedflux(sNO3)/dz(nz)*dT/SDay, 0.)
+ !O2 Exchange
+                ff_new(nz,iO2)  = AMAX1(ff_new(nz,iO2)  - sedflux(sO2)/dz(nz)*dT/SDay, 0.)
+ 
+ !DOC Exchange
+        sedflux_iOM2_A = ff_new(nz,iOM2_A) / (ff_new(nz,iOM2_A) + ff_new(nz,iOM2_Z) + ff_new(nz,iOM2_R) + ff_new(nz,iOM2_bc))&
+      &   * sedflux(sDOC)/dz(nz)*dT/SDay
+        ff_new(nz,iOM2_A) = AMAX1(ff_new(nz,iOM2_A)-sedflux_iOM2_A, 0.)
+ 
+        sedflux_iOM2_Z = ff_new(nz,iOM2_Z) / (ff_new(nz,iOM2_A) + ff_new(nz,iOM2_Z) + ff_new(nz,iOM2_R) + ff_new(nz,iOM2_bc)) &
+      &   * sedflux(sDOC)/dz(nz)*dT/SDay
+        ff_new(nz,iOM2_Z) = AMAX1(ff_new(nz,iOM2_Z)-sedflux_iOM2_Z, 0.)
+ 
+        sedflux_iOM2_R = ff_new(nz,iOM2_R) / (ff_new(nz,iOM2_A) + ff_new(nz,iOM2_Z) + ff_new(nz,iOM2_R) + ff_new(nz,iOM2_bc)) &
+      &   * sedflux(sDOC)/dz(nz)*dT/SDay
+        ff_new(nz,iOM2_R) = AMAX1(ff_new(nz,iOM2_R)-sedflux_iOM2_R, 0.)
+ 
+        sedflux_iOM2_BC = ff_new(nz,iOM2_bc) / (ff_new(nz,iOM2_A) + ff_new(nz,iOM2_Z) + ff_new(nz,iOM2_R) + & 
+            ff_new(nz,iOM2_bc)) * sedflux(sDOC)/dz(nz)*dT/SDay
+        ff_new(nz,iOM2_bc) = AMAX1(ff_new(nz,iOM2_bc)-sedflux_iOM2_bc, 0.)
+ 
+ !OM1 Exchange for OM1_A and OM1_Z
+        sedflux_iOM1_A = ff_new(nz,iOM1_A) / (ff_new(nz,iOM1_A) + ff_new(nz,iOM1_Z)) * sedflux(sOM1)/dz(nz)*dT/SDay
+        ff_new(nz,iOM1_A) = AMAX1(ff_new(nz,iOM1_A)-sedflux_iOM1_A, 0.)
+ 
+        sedflux_iOM1_Z = ff_new(nz,iOM1_Z) / (ff_new(nz,iOM1_A) + ff_new(nz,iOM1_Z)) * sedflux(sOM1)/dz(nz)*dT/SDay
+        ff_new(nz,iOM1_Z) = AMAX1(ff_new(nz,iOM1_Z)-sedflux_iOM1_Z, 0.)
+ 
+ !OM2 Exchange for OM1_R and OM1_bc 
+        sedflux_iOM1_R = ff_new(nz,iOM1_R) / (ff_new(nz,iOM1_R) + ff_new(nz,iOM1_bc)) * sedflux(sOM2)/dz(nz)*dT/SDay
+        ff_new(nz,iOM1_R) = AMAX1(ff_new(nz,iOM1_R)-sedflux_iOM1_R, 0.)
+ 
+        sedflux_iOM1_bc = ff_new(nz,iOM1_bc) / (ff_new(nz,iOM1_R) + ff_new(nz,iOM1_bc)) * sedflux(sOM2)/dz(nz)*dT/SDay
+        ff_new(nz,iOM1_bc) = AMAX1(ff_new(nz,iOM1_bc)-sedflux_iOM1_bc, 0.)
+ 
+ !ALK Exchange
+                ff_new(nz,iALK) = AMAX1(ff_new(nz,iALK) - sedflux(sALK)/dz(nz)*dT/SDay, 0.)
+ 
+ endif
+
+
+
+RETURN
+
+end subroutine cgem_flux 

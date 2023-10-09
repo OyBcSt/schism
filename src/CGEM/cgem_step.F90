@@ -152,7 +152,6 @@
     real, save :: KG1_save, KG2_save
 !timestep in days
     real :: dTd
-    integer :: StepsPerDay
 !------------------------------------------------------------------
 !Output vars for alkalinity subroutine:
     real :: ph_calc(1), pco2_calc(1), fco2(1), co2(1), hco3(1), co3(1), omegaa(1), omegac(1), betad_calc(1) 
@@ -166,8 +165,7 @@
     m_lat = lat
 
 !convert to timestep in days
-  StepsPerDay = 86400.
-  dTd = dt/StepsPerDay
+  dTd = dt/SDay
 
 ! write(6,*) "SPD,dTd,dt",StepsPerDay,dTd,dt
 
@@ -1011,6 +1009,11 @@ enddo
     write(6301,'(*(g0,:,", "))') TC_8,rad,wind,S(k),T(k)
     write(6401,'(*(g0,:,", "))') PARsurf,PARdepth,PARbot
   endif
+
+  !
+  CBODW = RO2(km)
+  Esed = PARdepth(km)
+  call cgem_flux(dT,istep)
 
   !! Before Advection and VMixing, combine A's and Q's
   do isp=1,nospA

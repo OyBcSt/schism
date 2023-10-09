@@ -7,10 +7,13 @@ cgem_utils.F90
 MOD_UTILITIES.F90
 cgem_flux.F90
 date_time.F90
+changeA.F90
 Model_Diagenesis.F90
 SDM.F90
 Sediment_Diagenesis_Flux.F90
 Sediment_Diagenesis_Routines.F90
+JW_SOC.F90
+Meta_SOC.F90
 moc_src/constants.F90
 moc_src/depth2press.F90
 moc_src/f2pCO2.F90
