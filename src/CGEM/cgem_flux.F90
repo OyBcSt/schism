@@ -1,11 +1,11 @@
-subroutine cgem_flux(dT,istep)
+subroutine cgem_flux(dT,istep,CBODW,Esed)
 
 use grid, only:T,S,dz,Wind,km
 !This is called after cgem_step, which returns ff_new
 !This modifies the surface and bottom cells of ff_new
 use cgem, only:ff_new,Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,pCO2,iALK,iSi,iPO4,pH, &
-        & iSOC,CBODW,iA,Esed,iNO3,iNH4,iNutEx,iMPB,nospA,SDay,iSDM,dT_sed,&
-        & iOM1_A,iOM2_A,iOM1_Z,iOM2_Z,iOM1_R,iOM2_R,iOM1_BC,iOM2_BC
+        & iSOC,iA,iNO3,iNH4,iNutEx,iMPB,nospA,SDay,iSDM,dT_sed,&
+        & iOM1_A,iOM2_A,iOM1_Z,iOM2_Z,iOM1_R,iOM2_R,iOM1_BC,iOM2_BC,nf
 use SDM
 use MOD_UTILITIES
 !from mocxy
@@ -14,7 +14,7 @@ use gasx
 implicit none
 
 integer, intent(in) :: istep
-real, intent(in) :: dT
+real, intent(in) :: dT, CBODW, Esed
 integer :: nz
 real :: T_sfc, Sal_sfc, O2_sfc, Sc, Op_umole, rhow, Op, OsDOp
 real :: Vtrans, alpha_O2, O2_atF,zs, DIC_sfc, CO2_atF
@@ -29,7 +29,8 @@ real :: Vtrans, alpha_O2, O2_atF,zs, DIC_sfc, CO2_atF
   real :: SOC, DICFlux,tau,O2Flux,NO3Flux,NH4Flux,PO4Flux,SiFlux,ALKFlux
   real :: sedflux_iOM1_A,sedflux_iOM2_A,sedflux_iOM1_Z,sedflux_iOM2_Z
   real :: sedflux_iOM1_BC,sedflux_iOM2_BC,sedflux_iOM1_R,sedflux_iOM2_R
-      !-- Convert quanta/cm2/s to mol photons/m2/d
+  real, dimension(nf) :: f
+  !-- Convert quanta/cm2/s to mol photons/m2/d
       !   N_Av=6.0221413E+23
       !   quanta/cm2/s * 1 mol/N_av quanta * 10,000cm2/m2 * 86400s/d = mol/m2/d
       real, parameter :: convert_I   = 1. / 6.0221413 * 8.64 * 1.e-15
@@ -37,7 +38,6 @@ real :: Vtrans, alpha_O2, O2_atF,zs, DIC_sfc, CO2_atF
 
 nz = km
 nstep_sed = int(dT_sed / dT)  ! number of steps in-between calls to sediment diagenesis
-
 
 if(Which_fluxes(iO2surf).eq.1) then
 !--------------------------------------------------------------
@@ -141,22 +141,35 @@ if(Which_fluxes(iSOC).eq.1) then
                ff_new(nz,iDIC) = AMAX1(ff_new(nz,iDIC) + DICFlux/  &
      & dz(nz)*dT/SDay,0.)
 elseif(Which_fluxes(iSOC).eq.2.or.Which_fluxes(iSOC).eq.3) then
-!Justic and Wang sediment oxygen consumption
-     tau=0.
-     call JW_SOC(O2Flux,NH4Flux,PO4Flux,CBODW,ff_new(nz,iA(1):iA(nospA)),Esed,ff_new(nz,iO2), &
-       T(nz),tau)
-!O2
-               ff_new(nz,iO2) = AMAX1(ff_new(nz,iO2)    + O2Flux/  &
-     & dz(nz)*dT/SDay,0.)
-!NH4
-               ff_new(nz,iNH4) = AMAX1(ff_new(nz,iNH4)  + NH4Flux/  &
-     & dz(nz)*dT/SDay,0.)
-!PO4
-               ff_new(nz,iPO4) = AMAX1(ff_new(nz,iPO4)  + PO4Flux/  &
-     & dz(nz)*dT/SDay,0.)
+        write(6,*) "Error, iSOC is 2 or 3"
+        write(6,*) "JW_SOC requires storing CBODS across grid and has not been implemented"
+        write(6,*) "Stopping"
+        stop
+!L3flux !Justic and Wang sediment oxygen consumption
+!L3flux      tau=0.
+!L3flux      call JW_SOC(O2Flux,NH4Flux,PO4Flux,CBODW,ff_new(nz,iA(1):iA(nospA)),Esed,ff_new(nz,iO2), &
+!L3flux        T(nz),tau)
+!L3flux !O2
+!L3flux                ff_new(nz,iO2) = AMAX1(ff_new(nz,iO2)    + O2Flux/  &
+!L3flux      & dz(nz)*dT/SDay,0.)
+!L3flux !NH4
+!L3flux                ff_new(nz,iNH4) = AMAX1(ff_new(nz,iNH4)  + NH4Flux/  &
+!L3flux      & dz(nz)*dT/SDay,0.)
+!L3flux !PO4
+!L3flux                ff_new(nz,iPO4) = AMAX1(ff_new(nz,iPO4)  + PO4Flux/  &
+!L3flux      & dz(nz)*dT/SDay,0.)
 elseif(Which_fluxes(iSOC).eq.4) then
 !Meta Model
-     call Meta_SOC(ff_new(nz,:),T(nz),S(nz),dz(nz))
+     f(:) = ff_new(nz,:)
+     call Meta_SOC(f,T(nz),S(nz),dz(nz),dT)
+!Update state variables with flux values
+      ff_new(nz,iO2) =  f(iO2)
+      ff_new(nz,iNH4) = f(iNH4)
+      ff_new(nz,iNO3) = f(iNO3)
+      ff_new(nz,iOM1_A) = f(iOM1_A)
+      ff_new(nz,iOM1_Z) = f(iOM1_Z)
+      ff_new(nz,iOM1_R) = f(iOM1_R)
+      ff_new(nz,iOM1_BC) =f(iOM1_BC)
 endif
 
 
@@ -205,7 +218,11 @@ endif
 
 
  if (Which_Fluxes(iSDM) .eq. 1) then
- 
+
+         write(6,*) "SDM is in the code and compiles, but it was never checked, and not expected to work"
+         write(6,*) "stopping"
+         stop
+
  ! Sediment Diagenesis Model
  !        if(init.eq.1.or.mod(istep,288).eq.0) then  !Call every day, every 288 timesteps, assumes timestep = 5 min
  !           call Sediment_Diagenesis_Flux(dT*288,f(i,j,nz,:),T(i,j,nz),S(i,j,nz),pH(i,j,nz),sedflux(i,j,:),s_x1A(i,j,nz),&

@@ -1011,9 +1011,9 @@ enddo
   endif
 
   !
-  CBODW = RO2(km)
-  Esed = PARdepth(km)
-  call cgem_flux(dT,istep)
+  !CBODW = RO2(km)
+  !Esed = PARdepth(km)
+  call cgem_flux(dT,istep,RO2(km),PARdepth(km))
 
   !! Before Advection and VMixing, combine A's and Q's
   do isp=1,nospA

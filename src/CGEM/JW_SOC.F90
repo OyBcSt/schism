@@ -1,11 +1,12 @@
-      Subroutine JW_SOC(O2Flux,NH4Flux,PO4Flux,CBODW_in,PHY_in,I_in,DO2_in,T,tau,dT)
+      Subroutine JW_SOC(O2Flux,NH4Flux,PO4Flux,CBODW_in,PHY_in,I_in,DO2_in,T,tau,dT,istep)
 
       use grid, only:km
-      use cgem, only:nospA,Qc,SDay,CBODS
+      use cgem, only:nospA,Qc,SDay
 
       IMPLICIT NONE
 
-      integer, intent(in) :: dT
+      integer, intent(in) :: istep
+      real, intent(in) :: dT
 
       real, intent(out) :: O2Flux       !Change in O2, (mg O2/L/d)
       real, intent(out) :: NH4Flux      !Change in NH4, (mg NH4/L/d)
@@ -35,12 +36,14 @@
       real, parameter :: f_dnf     = 0.12
       real :: CBODW, PHY(nospA), PHY_tot, Irr, DO2  !Variables converted to subroutine units
       real :: dCBODS, CBODS_sed_burial, SOC, Bnth_Photosyn, PHY_sett, CBODW_sett !Calculations
-      integer, save :: init = 0
+!Doesn't work...should be stored over whole grid and defined in cgem.F90
+      !It's here just so the code can compile
+      real CBODS
 
-      if(init.eq.0) then
+
+      if(istep.eq.0) then
       !Initialize CBODS
        CBODS = 0.
-       init = 1
       endif
 
       !Unit Conversions

@@ -25,11 +25,7 @@ real, parameter :: SDay = 86400.
 real, dimension(:), allocatable :: ws
 real, dimension(:), allocatable :: fmin
 
-!Stoichiometry: keep these as state variables
-!real, dimension(:,:), allocatable :: s_x1A,s_y1A,s_z1A
-!real, dimension(:,:), allocatable :: s_x2A,s_y2A,s_z2A
-!real, dimension(:,:), allocatable :: s_x1Z,s_y1Z,s_z1Z
-!real, dimension(:,:), allocatable :: s_x2Z,s_y2Z,s_z2Z
+!Fixed Stoichiometry:
 real :: sx1R,sy1R,sx2R,sy2R
 real :: sx1BC,sy1BC,sx2BC,sy2BC
 
@@ -51,8 +47,6 @@ integer, parameter :: i_Si      = 9 !Silica (SA, SRP) Fluxes
 ! =========================================================
 ! Terms for Flux Calculations
 ! =========================================================
-       REAL :: Esed
-       REAL :: CBODW,CBODS
        REAL :: dT_sed
        REAL,ALLOCATABLE :: pH(:)
 
@@ -760,14 +754,8 @@ enddo
 !ff(:,iALK) = ALK_init !2134               !ALK 
 !ff(:,iTr) = Tr_init !1                  !Tr
 
-Esed = -9999.
-CBODW = -9999.
-CBODS = -9999.
 pH = -9999.
 
-#ifdef DEBUG
-write(6,*) "After Esed",s_z2Z
-#endif
 
 ws = 0.
 fmin = 1.e-8 
