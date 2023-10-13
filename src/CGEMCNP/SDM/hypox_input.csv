@@ -1,0 +1,72 @@
+2      !n_its    (number of iterations),,,,,,,
+0.1     !step_in (timestep in days),,,,,,,
+Sediment Diagenesis Input File,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,Model Parameter,Units,value,Approximate minimum ,Approximate Maximum,
+1, 'physical', 'temperature', 'degree_C',26.5,39.75,13.25,bottom-water
+2, 'physical', 'salinity', 'psu',35.85,53.78,17.925,bottom-water
+3, 'physical', 'pressure', 'atm',2.9,4.35,1.45,bottom-water
+4, 'physical', ' pH', 'None',7.9,11.85,3.95,bottom-water
+5, 'physical', 'Surface biodiffusion (BD0 )', 'cm2 y-1',10,6,2,"SWI diffusive mixing, bioturbation (Meire et al. 2013)"
+6, 'physical', ' Depth biodiffusion decrease', 'cm',5,0,0,depth of bioirrigation
+7, 'physical', ' Depth biodiffusion goes to 0', 'cm',8,0,12.5,Set slightly larger than the depth of bioirrigation
+8, 'kinetic_rates', 'OM rate constants', 'y-1',3.65,5,50,"reactivity of labile OM input to the sediment surface. Maximum is about 50 for pure phytoplankton (Eldridge 1998), Chen et al (2005) indicate that chla degradation rate is about 7.5 based on profile data."
+9, 'kinetic_rates', 'OM rate constants', 'y-1',0.0037,0.12,0.04,refractory OM
+10, 'kinetic_rates', 'DOM rate constants', 'y-1',35,1.5,0.5,DOM degradation
+11, 'kinetic_rates', 'exp c f(DB)', 'None',0,0,0,if you want something other than a linear decrease in biodiffusion change this (see book by Boudreau 1997)
+12, 'kinetic_rates', 'dissolution rate', 'y-1',0.15,0.23,0.075,"creation of DOM from POM by cell leakage, lysis, etc."
+13, 'equilibrium K', ' KFeS', '[mol L-1]2',0.0006,0.01,0.003,equilibrium constant (do not change unless you have specific information about Fe minerology)
+14, 'kinetic_rates', 'k8([Fe2][O2])', 'mM-1 y-1',80,52500,17500,approximate rates (change within the range of what's in Boudreau 1996)
+15, 'kinetic_rates', 'k10([MnO2][Fe2+])', 'mM-1 y-1',0.6,1.5,0.5,Manganese dioxide
+16, 'kinetic_rates', 'k11([NH4+][O2]', 'mM-1 y-1',2.6,150,50,Ammonium
+17, 'kinetic_rates', 'k12([TS][O2])', 'mM-1 y-1',2600,390,130,total sulfide - oxygen
+18, 'kinetic_rates', 'k13([TS][MnO2])', 'mM-1 y-1',0.1,1.5,0.5,total sulfide - manganese dioxide
+19, 'kinetic_rates', 'k14 ([TS][Fe(OH)3])', 'mM-1 y-1',0.1,1.5,0.5,total sulfide - Iron (III) hydrixude
+20, 'kinetic_rates', 'k15 ([FeS][O2])', 'mM-1 y-1',3,300,100,iron sulfide o oxygen
+21, 'kinetic_rates', 'k23 ([FeS]', 'mM-1 y-1',1,150,50,iron sulfide
+22, 'kinetic_rates', 'k_23 ([FeS])', 'mM-1 y-1',0.0028,0.02,0.005,iron sulfide
+23, 'elemental ratios OM1', 'C:Ps atom L', 'None',105,157.5,52.5,labile (L)OM Ratio normalized to Redfield
+24, 'elemental ratios OM1', 'N:Ps atom L', 'None',16,37.5,12.5,labile (L)OM Ratio normalized to Redfield
+25, 'elemental ratios OM1', 'P:Ps atom L', 'None',0.158,0.24,0.079,labile (L)OM Ratio normalized to Redfield
+26, 'elemental ratios OM2', 'C:Ps atom NL', 'None',105,157.5,52.5,not labile (NL)OM Ratio normalized to Redfield
+27, 'elemental ratios OM2', 'N:Ps atom NL', 'None',16,37.5,12.5,not labile (NL)OM Ratio normalized to Redfield
+28, 'elemental ratios OM2', 'P:Ps atom NL', 'None',0.158,0.15,0.05,not labile (NL)OM Ratio normalized to Redfield
+29, 'elemental ratios DOM2', 'C:Ps atom DOC', 'None',105,157.5,52.5,DOM Ratio normalized to Redfield
+30, 'elemental ratios DOM2', 'N:Ps atom DOC', 'None',16,15,5,DOM Ratio normalized to Redfield
+31, 'elemental ratios DOM2', 'P:Ps atom DOC', 'None',0.1,0.15,0.05,DOM Ratio normalized to Redfield
+32, 'Monod constant', 'kO2', 'mM',0.04,1.5,0.5,half-saturation (Boudreau 1996)
+33, 'Monod constant', 'kNO3-', 'mM',2,7.5,2.5,half-saturation (Boudreau 1996)
+34, 'Monod constant', 'kMn0', 'mM',20000,1.5,0.5,half-saturation (Boudreau 1996)
+35, 'Monod constant', 'kFe(III) ', 'mM',144000,120,40,half-saturation (Boudreau 1996)
+36, 'Monod constant', 'kSO42- ', 'mM',3200,75,25,half-saturation (Boudreau 1996)
+37, 'sediment switch', 'irrigation? yes = 1  no = 0', 'NA',1,1,1,this can't be changed
+38, 'sediment character', 'Irrigation coef.', 'y',60,300,100,a0=2+0.5*[O2] (Morse and Eldridge 2006 and Eldridge and Morse 2008)
+39, 'sediment character', 'Depth of irrigation', 'cm',20,30,10,depth of tubes or burrows
+40, 'sediment character', 'Advective velocity', 'cm y-1',1,0.45,0.15,burial rate
+41, 'sediment character', 'Surface porosity', 'cm3w/cm3b',0.7,0.96,0.56,porosity at sediment surface.  Porosity profile measurements may also be input to the model
+42, 'sediment character', 'Asymtoptic porosity at depth', 'cm3w/cm3b',0.5,0.9,0.3,minimum porosity
+43, 'sediment character', 'Porosity coefficent', 'None',0.01,0,0,change in porosity per depth (see Boudreau 1997)
+44, 'Numerical setup', ' # depth points (1500 max)', 'NA',100,100,100,"Number of horizons that are being simulated (1500 is the max, 100-400 is the typical situation). "
+45, 'Numerical setup', 'Maximun depth of simulation', 'cm',20,20,20,Model is run to this depth
+46, 'Numerical setup', 'length of simulation (not used)', 'd',400,400,400,length of run is hardwired in the FORTRAN code to 100 years in original SDM code.
+47, 'Initial conc. conditions', 'Benthic boundary  O2', 'mM',160,169.5,56.5,Overlying O2
+48, 'Initial conc. conditions', 'Benthic boundary  NO3-1', 'mM',0.9,4.5,1.5,Overlying nitrate
+49, 'Initial conc. conditions', 'Benthic boundary  NH4+', 'mM',180,7.5,2.5,Overlying ammonium
+50, 'Initial conc. conditions', 'Benthic boundary  SO42-', 'mM',22000,48600,16200,Overlying sulfate
+51, 'Initial conc. conditions', 'Benthic boundary  TH2S', 'mM',2,3,1,Overlying hydrogen sulfide
+52, 'Initial conc. conditions', 'Benthic boundary  MnO2', 'mmol gdw-1',36000,13950,4650,Overlying manganese dioxide
+53, 'Initial conc. conditions', 'Benthic boundary  Mn2-', 'mM',23,150,50,Overlying manganese
+54, 'Initial conc. conditions', 'Benthic boundary  React-Fe(III)', 'mmol gdw-1',120000,187500,62500,Reactive iron
+55, 'Initial conc. conditions', 'Benthic boundaryr  Fe2+', 'mM',23,30,10,Iron
+56, 'Initial conc. conditions', 'Benthic boundary  FeS', 'mmol gdw-1',10000,45000,15000,Iron sulfide
+57, 'Initial conc. conditions', 'Benthic boundary  DOM', 'mM',500,750,250,surface DOM concentration
+58, 'Initial conc. conditions', 'Benthic boundary  TC', 'mM',5000,4500,1500,Total carbon
+59, 'Initial conc. conditions', 'Benthic boundary DOMI', 'mM',500,750,250,DOM input concentration (DOMI) input by tube feeders. This allows the model to take DOM from higher above the SWI due to tube feeders.
+60, 'Initial conc. conditions', 'Benthic boundary NH4+', 'mM',180,7.5,2.5,Ammonium
+61, 'switch boundary type', 'OM  boundary conc. (1) flux  (2)', 'NA',2,2,2,hardwired to flux
+62, 'Initial flux conditions', 'OM1 flux  ', 'mg C m-2 d-1',500,225,75,labile OM flux to sediment surface
+63, 'Initial flux conditions', 'OM2 flux  ', 'mg C m-2 d-1',100,45,15,non-labile OM flux to sediment surface
+64, 'adsorption Coef', 'Ammoniun desorption', 'NA',1,1.5,0.5,if set to 1 this option is turned off. Suggest referencing values rom Morse and Morin (2000)
+73, 'used to end while loop', 'Model options', 'NA',0,1,1,

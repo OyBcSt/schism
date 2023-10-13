@@ -1,6 +1,6 @@
 ###XSEDE Comet
 
-set (SCHISM_EXE_BASENAME pschism CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
+set (SCHISM_EXE_BASENAME pschism.cnp CACHE STRING "Base name (modules and file extension to be added of the executable. If you want a machine name, add it here")
 
 ###Relative paths won't work
 set(CMAKE_Fortran_COMPILER ifort CACHE PATH "Path to serial Fortran compiler")
