@@ -10,6 +10,9 @@ implicit none
 
 save
 
+!Write or not
+logical sinkwcgem,adjust_ws
+
 !number of species
 integer :: nospA
 integer :: nospZ
@@ -24,6 +27,7 @@ real, parameter :: SDay = 86400.
 !Sinking
 real, dimension(:), allocatable :: ws
 real, dimension(:), allocatable :: fmin
+real :: x !for tiny
 
 !Fixed Stoichiometry:
 real :: sx1R,sy1R,sx2R,sy2R
@@ -279,7 +283,7 @@ subroutine cgem_dim
   integer           :: istat,iunit
   character(len=1000) :: line
   !http://degenerateconic.com/namelist-error-checking.html
-  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug
+  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug,sinkwcgem,adjust_ws
 
 #ifdef DEBUG
 write(6,*) "Begin cgem_dim"
@@ -756,16 +760,18 @@ enddo
 
 pH = -9999.
 
+fmin = tiny(x)
+fmin(iA(:)) = 1.
+fmin(iZ(:)) = 1.
+fmin(iQn(:)) = QminN(:)
+fmin(iQp(:)) = QminP(:)
+
 
 ws = 0.
-fmin = 1.e-8 
 ws(iA(:))=sinkA(:)
-fmin(iA(:)) = 1.
 !We didn't do this before, but we should have...
 ws(iQn(:)) = sinkA(:)
 ws(iQp(:)) = sinkA(:)
-fmin(iQn(:)) = QminN(:)
-fmin(iZ(:)) = 1.
 
 #ifdef DEBUG
 write(6,*) "ws(ia)",ws(iA(:))

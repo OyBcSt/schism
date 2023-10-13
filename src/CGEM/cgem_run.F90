@@ -8,7 +8,7 @@ subroutine cgem_run(istep,myrank)
   use schism_glbl, only : rkind,nea,idry_e,irange_tr,flx_sf,flx_bt,bdy_frc,&
    & nvrt,kbe,dpe,tr_el,dt,srad,elnode,i34,windx,windy,area,ze,wsett
   use grid, only : T,S,km,dz,Vol,d,d_sfc,START_SECONDS,Wind,Rad
-  use cgem, only: ws,ff,ff_new,skipcgem,checkwindrad
+  use cgem, only: ws,ff,ff_new,skipcgem,checkwindrad,sinkwcgem
 
   implicit none
 
@@ -16,6 +16,7 @@ subroutine cgem_run(istep,myrank)
   integer :: itmp1,itmp2,i,m,im,mm,k,TC_8
   logical :: dowrite 
   real :: cgemdt
+  real :: mindz
   real, dimension(km) :: cgemarea
   real, parameter :: cv        = 2.77e14 ! multiplicative factor used
                                              ! to convert from watts/m2 
@@ -48,17 +49,6 @@ subroutine cgem_run(istep,myrank)
     flx_sf(itmp1:itmp2,i)=0.d0
     flx_bt(itmp1:itmp2,i)=0.d0
     bdy_frc(itmp1:itmp2,:,i)=0.d0
-
-
-    !--Since this is constant, I'd rather define it somewhere else, but
-    !- it was not registering properly.  I'll get back to this.
-    !wsett is settling velocity
-    mm = 1                 !cgem tracers are mm=1:nf
-    do m=itmp1,itmp2       !schism's are m=itmp1:itmp2 
-      wsett(m,:,i)= ws(mm) !ws(nf) is cgem sinking array
-      mm = mm+1
-    enddo
-
 
   !Set cgem state variable array, ff, to tracer variables (tr_el) that schism 
   !  has 'transported' for us. 
@@ -100,7 +90,10 @@ subroutine cgem_run(istep,myrank)
   !the resulting text file will be enormous.
   if(myrank.eq.1.and.i.eq.1.and.checkwindrad.eq.1) write(16,*) "Wind,Rad,Minutes",Wind,Rad/cv,istep,istep*int(dt)/60./60.
 
-!The option to skip cgem is for verifying initial and boundary conditions,
+  dowrite=.FALSE.
+  if(i.eq.10.and.myrank.eq.1) dowrite=.TRUE.
+
+  !The option to skip cgem is for verifying initial and boundary conditions,
 !  sinking, and loading without cgem complicating the process 
 if(skipcgem.eq.1) then
   !Don't call cgem
@@ -109,14 +102,23 @@ else
   !Call CGEM for a column
   !Input is ff, output is ff_new
   call cgem_step(TC_8,cgemdt,istep,i,myrank)
-  !Set surface and bottom fluxes
-  !Input is ff_new, output is ff_new
-  !Call inside cgem_step !!call cgem_flux(cgemdt)
-  !Sinking, ff_new in, ff_new out
-  !dowrite=.FALSE.
-  !if(i.eq.10.and.myrank.eq.1) dowrite=.TRUE.
-  !call cgem_sink(cgemdt,cgemarea,dowrite)
 endif 
+  
+  if(sinkwcgem) then
+    call cgem_sink(cgemdt,cgemarea,dowrite)
+    do m=itmp1,itmp2
+      wsett(m,:,i) = 0.
+    enddo
+  else
+    !--Since this is constant, I'd rather define it somewhere else, but
+    !- it was not registering properly.  I'll get back to this.
+    !wsett is settling velocity
+    mm = 1                 !cgem tracers are mm=1:nf
+    do m=itmp1,itmp2       !schism's are m=itmp1:itmp2 
+      wsett(m,:,i)= ws(mm) !ws(nf) is cgem sinking array
+      mm = mm+1
+    enddo
+  endif
 
 
 !Update schism tracer variables with newly calculated cgem variables

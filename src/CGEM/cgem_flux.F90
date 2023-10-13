@@ -5,7 +5,7 @@ use grid, only:T,S,dz,Wind,km
 !This modifies the surface and bottom cells of ff_new
 use cgem, only:ff_new,Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,pCO2,iALK,iSi,iPO4,pH, &
         & iSOC,iA,iNO3,iNH4,iNutEx,iMPB,nospA,SDay,iSDM,dT_sed,&
-        & iOM1_A,iOM2_A,iOM1_Z,iOM2_Z,iOM1_R,iOM2_R,iOM1_BC,iOM2_BC,nf
+        & iOM1_A,iOM2_A,iOM1_Z,iOM2_Z,iOM1_R,iOM2_R,iOM1_BC,iOM2_BC,nf,fmin
 use SDM
 use MOD_UTILITIES
 !from mocxy
@@ -90,7 +90,7 @@ if(Which_fluxes(iO2surf).eq.1) then
                                            ! ((mmol-O2/m2/sec)
                                            ! negative means
                                            ! into
-   ff_new(1,iO2) = AMAX1(ff_new(1,iO2) - O2_atF/dz(1)*dT,0.)
+   ff_new(1,iO2) = AMAX1(ff_new(1,iO2) - O2_atF/dz(1)*dT,fmin(iO2))
 
 endif
 
@@ -110,7 +110,7 @@ if(Which_fluxes(iDICsurf).eq.1) then
              !----------------------------------------------------------
 !use mocsy instead but calculate to compare
              CO2_atF = gas_exchange(T_sfc,Sal_sfc,DIC_sfc,zs,pH(1),pCO2)
-                          ff_new(1,iDIC) = AMAX1(ff_new(1,iDIC) - CO2_atF/dz(1)*dT,0.)
+                          ff_new(1,iDIC) = AMAX1(ff_new(1,iDIC) - CO2_atF/dz(1)*dT,fmin(iDIC))
 
 elseif(Which_fluxes(iDICsurf).eq.2) then
 !---------------using mocsy:------------------------------------
@@ -127,7 +127,7 @@ elseif(Which_fluxes(iDICsurf).eq.2) then
  &            T(1), S(1), m_alk, m_dic, m_si, m_po4, kw660, pCO2_in, patm, zs, 1, &
  &            'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
 
-              ff_new(1,iDIC) = AMAX1(ff_new(1,iDIC) + 1000.*co2flux(1)/dz(1)*dT,0.)
+              ff_new(1,iDIC) = AMAX1(ff_new(1,iDIC) + 1000.*co2flux(1)/dz(1)*dT,fmin(iDIC))
 
 endif
 
@@ -136,10 +136,10 @@ if(Which_fluxes(iSOC).eq.1) then
 !Murrell and Lehrter sediment oxygen consumption
        SOC = - 0.0235*2.**(.1*T(nz))*ff_new(nz,iO2)
                ff_new(nz,iO2) = AMAX1(ff_new(nz,iO2)  + SOC/  &
-     & dz(nz)*dT/SDay,0.)
+     & dz(nz)*dT/SDay,fmin(iO2))
        DICFlux = (-3.7*log(AMAX1(ff_new(nz,iO2),1.e-8)) + 19.4)*SOC
                ff_new(nz,iDIC) = AMAX1(ff_new(nz,iDIC) + DICFlux/  &
-     & dz(nz)*dT/SDay,0.)
+     & dz(nz)*dT/SDay,fmin(iDIC))
 elseif(Which_fluxes(iSOC).eq.2.or.Which_fluxes(iSOC).eq.3) then
         write(6,*) "Error, iSOC is 2 or 3"
         write(6,*) "JW_SOC requires storing CBODS across grid and has not been implemented"
@@ -177,27 +177,27 @@ if(Which_fluxes(iNutEx).eq.1) then
 !NO3 Exchange
        NO3Flux = 0.0057*ff_new(nz,iO2) - 0.52
                ff_new(nz,iNO3) = AMAX1(ff_new(nz,iNO3) + NO3Flux/ &
-     & dz(nz)*dT/SDay,0.)
+     & dz(nz)*dT/SDay,fmin(iNO3))
 
 !NH4 Exchange
        NH4Flux = -1.55*NO3Flux + 0.69
                ff_new(nz,iNH4) = AMAX1(ff_new(nz,iNH4) + NH4Flux/ &
-     & dz(nz)*dT/SDay,0.)
+     & dz(nz)*dT/SDay,fmin(iNH4))
 
 !PO4 Exchange
       PO4Flux = 0.094*NH4Flux - 0.0125
                ff_new(nz,iPO4) = AMAX1(ff_new(nz,iPO4) + PO4Flux/ &
-     & dz(nz)*dT/SDay,0.)
+     & dz(nz)*dT/SDay,fmin(iPO4))
 
 !Si Exchange
       SiFlux = 1.68 
                ff_new(nz,iSi)  = AMAX1(ff_new(nz,iSi)  + SiFlux/ &
-     & dz(nz)*dT/SDay,0.)
+     & dz(nz)*dT/SDay,fmin(iSi))
 
 !ALK Exchange
       ALKFlux = NO3Flux - NH4Flux + PO4Flux
                ff_new(nz,iALK)  = AMAX1(ff_new(nz,iALK)  + ALKFlux/ &
-     & dz(nz)*dT/SDay,0.)
+     & dz(nz)*dT/SDay,fmin(iALK))
 endif
 
 

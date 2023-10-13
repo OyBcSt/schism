@@ -159,8 +159,6 @@
     real :: patm(1) = 1.
     real :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
     real :: m_lat(1)
-!For tiny
-    real x
 !mocsy needs lat to be an array
     m_lat = lat
 
@@ -195,9 +193,9 @@ write(6,*) "Begin cgem, TC_8,istep",TC_8,istep
 
   do isp = 1,nf
     do k=1,km
-      if(ff(k,isp).le.0.) then
+      if(ff(k,isp).le.fmin(isp)) then
         !write(6,*) "ff.le.0! set to 0 for istep,myrank,inea,k,isp=",istep,myrank,inea,k,isp,ff(k,isp)
-        ff(k,isp) = 0.0
+        ff(k,isp) = fmin(isp) 
       endif
     enddo
   enddo
@@ -992,10 +990,10 @@ enddo !end k loop
   ff_new(:,iTr) = ff(:,iTr) 
 
 do k=1,km
-  do isp = iNO3,nf
-    if(ff_new(k,isp).le.0.) then
+  do isp = 1,nf
+    if(ff_new(k,isp).le.fmin(isp)) then
       !write(6,*) "ff_new.le.0! set to 0 for istep,inea,k,isp=",istep,inea,k,isp,ff_new(k,isp)
-      ff_new(k,isp) = 0.0
+      ff_new(k,isp) = fmin(isp) 
     endif
   enddo
 enddo
