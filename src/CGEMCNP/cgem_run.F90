@@ -23,7 +23,6 @@ subroutine cgem_run(istep,myrank)
                                              ! to photons/cm2/sec
                                              ! Morel and Smith (1974)
   external :: cgem_step, cgem_flux, cgem_sink
-                                             
   
   !Just say Hi in mirror.out
   if(myrank==0) write(16,*) "In cgem_run: istep,dt=",istep,dt

@@ -2,7 +2,7 @@ module cgem
 
 !CGEM STATE VARIABLES
 use, intrinsic :: iso_fortran_env, only: stderr => error_unit
-use grid, only: km
+use grid
 
 implicit none
 
@@ -202,8 +202,8 @@ integer, parameter :: iSi     = 9 !Silica (SA, SRP) Fluxes
       integer :: nf
 
 !State Variable Array
-      real,allocatable :: ff(:,:) !state variable array
-      real, allocatable :: ff_new(:,:) !sources array
+      real,allocatable :: ff(:)   !state variable array
+      real, allocatable :: dff(:) !differentials array
 
 !----INPUT_VARS_CGEM
 !--Switches in GEM---------
@@ -584,14 +584,14 @@ write(6,*) "Begin cgem_allocate"
 !How many state variables
       nf = iALK
 
-      allocate(ff(km,nf),stat=ierr)
+      allocate(ff(nf),stat=ierr)
       if(ierr.ne.0) write(6,*) "error in allocating:ff"
 
-      allocate(ff_new(km,nf),stat=ierr)
-      if(ierr.ne.0) write(6,*) "error in allocating:ff_new"
+      allocate(dff(nf),stat=ierr)
+      if(ierr.ne.0) write(6,*) "error in allocating:dff"
 
-      ff = -9999. 
-      ff_new = -9999.
+      ff  = -9999. 
+      dff = -9999.
 
 !----allocate INPUT_VARS_CGEM
 
@@ -699,8 +699,8 @@ allocate(fmin(nf),stat=ierr)
 if(ierr.ne.0) write(6,*) "error in allocating:fmin"
 
 !pH
-  allocate(pH(km),stat=ierr)
-  if(ierr.ne.0) write(6,*) "error in allocating:pH"
+!  allocate(pH(km),stat=ierr)
+!  if(ierr.ne.0) write(6,*) "error in allocating:pH"
 
 !sinking
   allocate(sinkA(nospA),stat=ierr)

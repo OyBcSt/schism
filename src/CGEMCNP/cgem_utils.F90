@@ -555,14 +555,8 @@
 !---------------------------------------------     
     ! End Locals   
 
-#ifdef DEBUG
-write(6,*) "In reaction"
-#endif
-!write(6,*) "Reaction: OM1, OM2, O2, NO3,  X1, Y1, Z1, X2, Y2, Z2",myrank,inea,OM1,OM2,O2,NO3,X1,Y1,Z1
-
     ! Use the Q10 relationship to determine the rates.
     ! Assume that TEMP is the maximum temperature.
-
     RQ1  = KG1
     RQ2  = KG2
     TQ1  = 25.0
@@ -585,7 +579,6 @@ write(6,*) "In reaction"
     RCT2     = RQ22 * OM2
     R( 1 ) = O2 / ( KO2 + O2 )
     R( 1 ) = MAX( 0.0, R( 1 ) )
-
 
     FBNO3 = rnitrate( O2, KstarO2 ) ! Feedback on denitrification by O2.    
 
