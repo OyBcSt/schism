@@ -1,10 +1,8 @@
 !======================================================================     
-  Subroutine cgem_step( TC_8, dT, istep, PAR, d_sfc, is_bottom )
+  Subroutine cgem_step( dT, S, T, PAR, lat, d_sfc, is_bottom, is_day )
 
 !======================================================================
-  use grid !, only: lat,T,S,Rad
   use cgem
-  use cgem_light
   use cgem_growth
   use cgem_utils
   use date_time
@@ -16,11 +14,11 @@
 ! Interface variables
 !---------------------------------------------------------------------
   logical, intent(in)  :: is_bottom ! Is it the bottom?  For instant remineralization
-  integer, intent(in)  :: TC_8      ! Model time (seconds from beginning of Jan 1, 2002)
-  integer, intent(in)  :: istep     ! Current time step
-  real, intent(in)     :: dT
+  logical, intent(in)  :: is_day    ! Uptake only occurs during the day
+  real, intent(in)     :: lat       ! For mocsy- latitude 
   real, intent(in)     :: d_sfc     ! For mocsy
   real, intent(in)     :: PAR       ! PAR at cell center
+  real, intent(in)     :: S,T,dT
 !---------------------------------------------------------------------------------------
 ! Local Variables
 !-----------------------------------------------------
@@ -115,8 +113,10 @@
   real    :: R_11                            ! Nitrification term
   real    :: RNO3_A, RNO3_Z, RNO3_R, RNO3_BC ! Remineralization terms for NO3
   real    :: RNH4_A, RNH4_Z, RNH4_R, RNH4_BC ! Remineralization terms for NH4
-  real    :: ROM1_A, ROM1_Z, ROM1_R, ROM1_BC ! Remineralization terms for POC
-  real    :: ROM2_A, ROM2_Z, ROM2_R, ROM2_BC ! Remineralization terms for DOC
+  real    :: ROM1CA, ROM1CZ, ROM1_R, ROM1_BC ! Remineralization terms for POC
+  real    :: ROM2CA, ROM2CZ, ROM2_R, ROM2_BC ! Remineralization terms for DOC
+  real    :: ROM1NA, ROM1PA, ROM1NZ, ROM1PZ  !
+  real    :: ROM2NA, ROM2PA, ROM2NZ, ROM2PZ  !
   real    :: RO2_A, RO2_Z, RO2_R, RO2_BC     ! Remineralization terms for O2
   real    :: RPO4_A, RPO4_Z, RPO4_R, RPO4_BC ! Remineralization terms for PO4
   real    :: RDIC_A, RDIC_Z, RDIC_R, RDIC_BC ! Remineralization terms for DIC
@@ -128,9 +128,12 @@
 !---------------------------------------------------------
   real    :: OM1R,OM2R,OM1BC,OM2BC
   real    :: CDOM,NO3,NH4,DIC,O2,PO4,Si,ALK
+  real    :: OM1CA,OM1NA,OM1PA,OM1CZ,OM1NZ,OM1PZ
+  real    :: OM2CA,OM2NA,OM2PA,OM2CZ,OM2NZ,OM2PZ
+  real    :: pH
 !-----------------------------------------------------------------------
 ! Other variables 
-  real, dimension :: PrimProd                ! Primary production (photosynthesis)
+  real            :: PrimProd                ! Primary production (photosynthesis)
   real, dimension(nospA+nospZ) :: Tadj       ! Temperature adjustment factor
 !------------------------------------------------------------------    
 !timestep in days
@@ -141,14 +144,14 @@
   real :: rhosw(1), p(1), tempis(1)
   real :: patm(1) = 1.
   real :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
-  real :: m_lat(1)
+  real :: m_lat(1),m_T(1),m_S(1),m_d_sfc(1)
 !mocsy needs lat to be an array
   m_lat = lat
+  m_T = T
+  m_S = S
+  m_d_sfc = d_sfc
 !convert to timestep in days
   dTd = dt/SDay
-
-  if(Which_rad.eq.0) call getSolar( iYrS, TC_8, lon, lat, Rad)
-  if(Which_wind.eq.0) Wind = 5. 
 
   ! Renaming is for readability...
   A(:)  = ff(iA(:))
@@ -189,7 +192,7 @@
  
   !- ZgrazA_tot: total zooplankton grazing on Ai by all zooplankton groups (cells/m3/d)
   do isp = 1, nospA
-     Abiovol         = A(k,isp)*volcell(isp) 
+     Abiovol         = A(isp)*volcell(isp) 
      top_A(isp,:)    = AMAX1((Abiovol-Athresh(isp))*ediblevector(:,isp),0.0)
      bottom_A(isp,:) = Abiovol * ediblevector(:,isp)
   enddo
@@ -218,7 +221,7 @@
   !------------------------------------------------------------------------     
   ! Nutrient limited uptake:
   ! Find Rate Limiting Nutrient RLN for N, P, and Si:
-  if(Rad.le.tiny(x)) then  !Nutrient uptake only takes place during the day
+  if(is_day) then  !Nutrient uptake only takes place during the day
      vN = 0.
      vP = 0.
      vSi = 0.
@@ -262,7 +265,7 @@
      &      *( Si/(Si+aN(isp)*Ksi(isp)) )
 
             vP(isp) = Q10_T(T,vmaxP(isp))*monodP(isp)*f_Qp(isp)&
-     &      *( Si(k)/(Si+aN(isp)*Ksi(isp)) )
+     &      *( Si/(Si+aN(isp)*Ksi(isp)) )
 
             vSi(isp) = Q10_T(T,vmaxSi(isp))*monodSi(isp)
          enddo
@@ -347,19 +350,21 @@
   !------------------------------------         
   ! Liebigs Law for zooplankton group isz 
   !------------------------------------
-  if (ZinN(:) .gt. optNP(:)*ZinP(:)) then  
-      Zgrow(:)= ZinP(:)/ZQp(:)                   ! P-limited growth (indv./m3/d) 
-      ZegN(:) = ZinN(:) - ZinP(:)*optNP(:)       ! P-limited N excretion (mmol-N/m3/d) 
+  do isz=1,nospZ
+  if (ZinN(isz) .gt. optNP(isz)*ZinP(isz)) then  
+      Zgrow(isz)= ZinP(isz)/ZQp(isz)                   ! P-limited growth (indv./m3/d) 
+      ZegN(isz) = ZinN(isz) - ZinP(isz)*optNP(isz)       ! P-limited N excretion (mmol-N/m3/d) 
                                                  ! determined by subtracting N-equivalent of ZinP
-      ZegC(:) = ZinC(:) - ZinP(:)/ZQp(:)*ZQc(:)  ! P-limited C excretion (mmol-C/m3/d)
-      ZegP(:) = 0.                        
+      ZegC(isz) = ZinC(isz) - ZinP(isz)/ZQp(isz)*ZQc(isz)  ! P-limited C excretion (mmol-C/m3/d)
+      ZegP(isz) = 0.                        
   else
-      Zgrow(:)= ZinN(:)/ZQn(:)                   ! N-limited growth (indv./m3/d)
-      ZegP(:) = ZinP(:) - ZinN(:)/optNP(:)       ! N-limited P excretion (mmol-P/m3/d)    
+      Zgrow(isz)= ZinN(isz)/ZQn(isz)                   ! N-limited growth (indv./m3/d)
+      ZegP(isz) = ZinP(isz) - ZinN(isz)/optNP(isz)       ! N-limited P excretion (mmol-P/m3/d)    
                                                  ! determined by subtracting P-equivalent of ZinN
-      ZegC(:) = ZinC(:) - ZinN(:)/ZQn(:)*ZQc(:)  ! N-limited C excretion (mmol-C/m3/d)
-      ZegN(:) = 0.
+      ZegC(isz) = ZinC(isz) - ZinN(isz)/ZQn(isz)*ZQc(isz)  ! N-limited C excretion (mmol-C/m3/d)
+      ZegN(isz) = 0.
   endif
+  enddo
   !------------------------------------------------
 
   !-----------------------------------------------------
@@ -399,8 +404,8 @@
   !---------------------------------------------------------------
   ! Instant Remineralization, if on bottom of shelf, redefine KG's
   if(is_bottom.and.which_fluxes(iInRemin).eq.1) then
-           KG1 = KG_bot
-           KG2 = KG_bot
+           KG1 = KGbot
+           KG2 = KGbot
   endif
   !------------------------------------------------------------
   ! Nitrification
@@ -416,9 +421,9 @@
   m_si  = Si/1000.
   m_po4 = PO4/1000.
   call vars(ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
-  &    T, S, m_alk, m_dic, m_si, m_po4, patm, d_sfc, m_lat, 1, &
+  &    m_T, m_S, m_alk, m_dic, m_si, m_po4, patm, m_d_sfc, m_lat, 1, &
   &    'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
-  pH(k) = ph_calc(1)
+  pH = ph_calc(1)
 
   !------------------------------------------------------------
   ! Particulate and Dissolved dead phytoplankton, rate of remineralization
@@ -473,8 +478,8 @@
   !------------------------------------------------------------
   ! Particulate and Dissolved riverine OM, rate of remineralization 
   !------------------------------------------------------------
-  call reaction( OM1R(k), OM2R(k), O2(k), NO3(k), KG1_R, KG2_R, KO2, KstarO2, KNO3,               &
-  &  sx1R, sy1R, sz, sx2R, sy2R, sz, T(k), RC )
+  call reaction( OM1R, OM2R, O2, NO3, KG1R, KG2R, KO2, KstarO2, KNO3,               &
+  &  sx1R, sy1R, sz, sx2R, sy2R, sz, T, RC )
   RC     = one_d_365 * RC  !Change units from /year to /day
   ROM1_R = RC(1)           ! units are /m3/day
   ROM2_R = RC(2)
@@ -490,8 +495,8 @@
   !------------------------------------------------------------
   ! Particulate and Dissolved initial and boundary OM, rate of remineralization
   !------------------------------------------------------------
-  call reaction( OM1BC(k), OM2BC(k), O2(k), NO3(k), KG1_BC, KG2_BC, KO2, KstarO2, KNO3,               &
-  &  sx1BC, sy1BC, sz1, sx2BC, sy2BC, sz1, T(k), RC )
+  call reaction( OM1BC, OM2BC, O2, NO3, KG1BC, KG2BC, KO2, KstarO2, KNO3,               &
+  &  sx1BC, sy1BC, sz, sx2BC, sy2BC, sz, T, RC )
   RC      = one_d_365 * RC  !Change units from /year to /day
   ROM1_BC = RC(1)           ! units are /m3/day
   ROM2_BC = RC(2)
@@ -615,19 +620,19 @@
   ff_new(iOM1PA) = OM1PA + (ROM1PA + OM1_PA)*dTd
   !-----------------------------------------------
   !-OM2_A: (mmol-C/m3-- Dead Phytoplankton Dissolved)
-  ff_new(iOM2CA) = OM2CA(:) + (ROM2CA(:) + OM2_CA(:))*dTd
-  ff_new(iOM2NA) = OM2NA(:) + (ROM2NA(:) + OM2_NA(:))*dTd
-  ff_new(iOM2PA) = OM2PA(:) + (ROM2PA(:) + OM2_PA(:))*dTd
+  ff_new(iOM2CA) = OM2CA + (ROM2CA + OM2_CA)*dTd
+  ff_new(iOM2NA) = OM2NA + (ROM2NA + OM2_NA)*dTd
+  ff_new(iOM2PA) = OM2PA + (ROM2PA + OM2_PA)*dTd
   !-----------------------------------------------
   !-OM1_Z:(mmol-C/m3--G particulate)
-  ff_new(iOM1CZ) = OM1CZ(:) + (ROM1CZ(:) + OM1_CZ(:))*dTd
-  ff_new(iOM1NZ) = OM1NZ(:) + (ROM1NZ(:) + OM1_NZ(:))*dTd
-  ff_new(iOM1PZ) = OM1PZ(:) + (ROM1PZ(:) + OM1_PZ(:))*dTd
+  ff_new(iOM1CZ) = OM1CZ + (ROM1CZ + OM1_CZ)*dTd
+  ff_new(iOM1NZ) = OM1NZ + (ROM1NZ + OM1_NZ)*dTd
+  ff_new(iOM1PZ) = OM1PZ + (ROM1PZ + OM1_PZ)*dTd
   !-----------------------------------------------
   !-OM2_Z:(mmol-C/m3--G dissolved)
-  ff_new(iOM2CZ) = OM2CZ(:) + (ROM2CZ(:) + OM2_CZ(:))*dTd
-  ff_new(iOM2NZ) = OM2NZ(:) + (ROM2NZ(:) + OM2_NZ(:))*dTd
-  ff_new(iOM2PZ) = OM2PZ(:) + (ROM2PZ(:) + OM2_PZ(:))*dTd
+  ff_new(iOM2CZ) = OM2CZ + (ROM2CZ + OM2_CZ)*dTd
+  ff_new(iOM2NZ) = OM2NZ + (ROM2NZ + OM2_NZ)*dTd
+  ff_new(iOM2PZ) = OM2PZ + (ROM2PZ + OM2_PZ)*dTd
   !---------------------------------------------------------------------
   !-OM1_R: (mmol-C/m3--SPM particulate)
   ff_new(iOM1R) = OM1R + ROM1_R*dTd
@@ -649,15 +654,6 @@
   & (RALK + AupN*NO3/(Ntotal)            &
   &          - AupN*NH4/(Ntotal)         &
   &          + AupP + 4.8*AupP)*dTd
-
-  !-- End Main GEM Calculations ---------------------------------------------------
-  !  call cgem_flux(dT,istep,PARdepth(km))
-
-  !! Before Advection and VMixing, combine A's and Q's
-  !do isp=1,nospA
-  !  ff_new(:,iQn(isp)) = ff_new(:,iQn(isp)) * ff_new(:,iA(isp))
-  !  ff_new(:,iQp(isp)) = ff_new(:,iQp(isp)) * ff_new(:,iA(isp))
-  !enddo
 
   return
   end subroutine cgem_step

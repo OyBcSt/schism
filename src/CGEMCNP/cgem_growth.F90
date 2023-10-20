@@ -1,6 +1,6 @@
 module cgem_growth
 
-use cgem, only: nospA,nospZ,writecsv,km,umax,QminN,QmaxN,QminP,QmaxP,nfQs,   &
+use cgem, only: nospA,nospZ,writecsv,umax,QminN,QmaxN,QminP,QmaxP,nfQs,   &
   & respg,respb,alphad,betad,Tref,KTg1,KTg2,Ea,KQn,KQp,KSi,Qc, &
   & which_growth,which_photosynthesis,which_quota,which_temperature,     &
   & which_uptake,CChla
@@ -96,7 +96,6 @@ subroutine calc_Agrow( E, T, Qn, Qp, Si, A, Agrow, &
         endif
         Aresp(isp) =  Agrow(isp) * respg2(isp) &  ! Growth dependent respiration (loss of cells), cells/m3/d
           & + Tadj(isp)  * respb(isp) * A(isp)  ! Basal respiration (loss of cells) , cells/m3/d
-    enddo
     enddo
 
     !if(writecsv==1.and.dowrite) then
@@ -326,28 +325,6 @@ write(6,*) "func_T, nospA, which_temperature",nospA,which_temperature
 return
 end subroutine func_T
 
-! These subroutines contain code for calculating mg chlorophyll-a from phytoplankton abundance.  Cloern is removed, so there is only:
-! 1. Fixed C:Chla ratio 
-
-function Fixed_CChla(A) RESULT(Chla_tot)
-
-  ! Input parameters
-  real, intent(in) :: A(km,nospA)  ! A's number density, cells/m3
-  ! Function return value
-  real :: Chla_tot(km)
-  
-  ! Local variables
-  integer :: k, isp
-
-  do k = 1, km 
-    Chla_tot(k) = 0.0
-    do isp = 1, nospA
-      Chla_tot(k) =  Chla_tot(k) + A(k,isp) * Qc(isp) * 12. * (1./CChla(isp)) 
-    enddo ! isp = 1, nospA
-  enddo ! k = 1, km 
-
-return
-end function Fixed_CChla 
-
+! Chla_tot(k) =  Chla_tot(k) + A(k,isp) * Qc(isp) * 12. * (1./CChla(isp)) 
 
 end module cgem_growth

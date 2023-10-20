@@ -2,7 +2,6 @@ module cgem
 
 !CGEM STATE VARIABLES
 use, intrinsic :: iso_fortran_env, only: stderr => error_unit
-use grid
 
 implicit none
 
@@ -18,9 +17,6 @@ integer :: nospZ
 !misc
 integer :: skipcgem,checkwindrad,writecsv,debug
 real :: eps
-
-!constants
-real, parameter :: SDay = 86400.
 
 !Sinking
 real, dimension(:), allocatable :: ws
@@ -43,15 +39,8 @@ integer, parameter :: iNutEx   = 5 !Sediment Nutrient Fluxes
 integer, parameter :: iCMAQ    = 6 !CMAQ surface deposition of NH4 and NO3
 integer, parameter :: iInRemin = 7 !Instant Remineralization in bottom layer
 integer, parameter :: iSDM     = 8 !Sediment Diagenesis Model
-integer, parameter :: iSi     = 9 !Silica (SA, SRP) Fluxes
 
 !Module CGEM_Flux
-! =========================================================
-! Terms for Flux Calculations
-! =========================================================
-       REAL :: dT_sed
-       REAL,ALLOCATABLE :: pH(:)
-
 !---------------------------------------------------------      
 !-A; Phytoplankton number density (cells/m3);
 !---------------------------------------------------------  
@@ -203,7 +192,7 @@ integer, parameter :: iSi     = 9 !Silica (SA, SRP) Fluxes
 
 !State Variable Array
       real,allocatable :: ff(:)   !state variable array
-      real, allocatable :: dff(:) !differentials array
+      real, allocatable :: ff_new(:) !differentials array
 
 !----INPUT_VARS_CGEM
 !--Switches in GEM---------
@@ -269,7 +258,7 @@ real, allocatable :: Zvolcell(:)
 real, allocatable :: ZQc(:)
 real, allocatable :: ZQn(:)
 real, allocatable :: ZQp(:)
-real, allocatable :: optNP
+real, allocatable :: optNP(:)
 real, allocatable :: ZKa(:)
 real, allocatable :: Zrespg(:)
 real, allocatable :: Zrespb(:)
@@ -351,7 +340,6 @@ subroutine cgem_read
   !http://degenerateconic.com/namelist-error-checking.html
   namelist /switches/ Which_fluxes,Which_temperature,Which_uptake,Which_quota,Which_irradiance,&
     Which_photosynthesis,Which_growth,Which_wind,Which_rad
-  namelist /sdm/ dT_sed
   namelist /optics/ Kw,Kcdom,Kspm,Kchla,astar490,aw490,astarOMA,astarOMZ,astarOMR,astarOMBC,PARfac,sinkCDOM
   namelist /temperature/ Tref,KTg1,KTg2,Ea
   namelist /phytoplankton/ umax,CChla,alpha,beta,respg,respb,QminN,QminP,QmaxN,QmaxP,Kn,Kp,Ksi,KQn,&
@@ -378,15 +366,6 @@ if (istat /= 0) then
  stop
 endif
 
-!namelist /switches/
-read(nml=sdm,iostat=istat,unit=iunit)
-if (istat /= 0) then
- backspace(iunit)
- read(iunit,fmt='(A)') line
- write(6,'(A)') &
-        'Invalid line in namelist: '//trim(line)
- stop
-endif
 
 !namelist /optics/
 read(nml=optics,iostat=istat,unit=iunit)
@@ -547,12 +526,12 @@ write(6,*) "Begin cgem_allocate"
 !-OM1_R: (mmol-C/m3--particulate)
 !         -- Particulate Organic Matter arising from river outflow
 !--------------------------------------------------------------------
-      iOM1_R = counter+18
+      iOM1R = counter+18
 !-------------------------------------------------      
 !-OM2_R: (mmol-C/m3--dissolved)
 !         -- Dissolved Organic Matter arising from river outflow
 !--------------------------------------------------------------------
-      iOM2_R = counter+19
+      iOM2R = counter+19
 !-------------------------------------------
 !-CDOM: (ppb) 
 !        -- Colored Dissolved Organic Matter
@@ -568,13 +547,13 @@ write(6,*) "Begin cgem_allocate"
 !         -- Particulate Organic Matter in initial and boundary 
 !            conditions 
 !--------------------------------------------------------------------
-      iOM1_BC = counter+22
+      iOM1BC = counter+22
 !-------------------------------------------------
 !-OM2_BC: (mmol-C/m3--dissolved)
 !         -- Dissolved Organic Matter in initial and boundary
 !            conditions
 !--------------------------------------------------------------------
-      iOM2_BC = counter+23
+      iOM2BC = counter+23
 !-------------------------------------------
 !-ALK:  (mmol-HCO3/m3)?
 !        -- Alkalinity
@@ -587,11 +566,11 @@ write(6,*) "Begin cgem_allocate"
       allocate(ff(nf),stat=ierr)
       if(ierr.ne.0) write(6,*) "error in allocating:ff"
 
-      allocate(dff(nf),stat=ierr)
+      allocate(ff_new(nf),stat=ierr)
       if(ierr.ne.0) write(6,*) "error in allocating:dff"
 
       ff  = -9999. 
-      dff = -9999.
+      ff_new = -9999.
 
 !----allocate INPUT_VARS_CGEM
 
@@ -698,13 +677,9 @@ if(ierr.ne.0) write(6,*) "error in allocating:ws"
 allocate(fmin(nf),stat=ierr)
 if(ierr.ne.0) write(6,*) "error in allocating:fmin"
 
-!pH
-!  allocate(pH(km),stat=ierr)
-!  if(ierr.ne.0) write(6,*) "error in allocating:pH"
-
 !sinking
-  allocate(sinkA(nospA),stat=ierr)
-  if(ierr.ne.0) write(6,*) "error in allocating:sinkA"
+allocate(sinkA(nospA),stat=ierr)
+if(ierr.ne.0) write(6,*) "error in allocating:sinkA"
 
 
 #ifdef DEBUG
@@ -778,7 +753,6 @@ enddo
 !ff(:,iALK) = ALK_init !2134               !ALK 
 !ff(:,iTr) = Tr_init !1                  !Tr
 
-pH = -9999.
 
 fmin = tiny(x)
 fmin(iA(:)) = 1.
@@ -801,7 +775,7 @@ ws(iCDOM) =  sinkCDOM
 
 ws(iOM1CA) = sinkOM1A
 ws(iOM1NA) = sinkOM1A
-ws(iOM1PA) =  sinkOM1A
+ws(iOM1PA) = sinkOM1A
 
 ws(iOM2CA) = sinkOM2A
 ws(iOM2NA) = sinkOM2A
@@ -826,11 +800,11 @@ write(6,*) "ws",ws
 
 
 !Convert per m/d to m/s 
-ws = ws / SDay
+ws = ws / 86400. 
 
 
 #ifdef DEBUG
-write(6,*) "ff(1)",ff(:,1)
+write(6,*) "ff(:)",ff_new(:)
 write(6,*) "End cgem_init"
 #endif
 

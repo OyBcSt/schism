@@ -1,12 +1,13 @@
-subroutine cgem_sink(dT,area,dowrite)
+subroutine cgem_sink(dT,area,dowrite,i)
 
 !This is called after cgem_step and cgem_flux, which returns ff_new
-use grid, only:km,Vol
-use cgem, only:ws,ff_new,nf,fmin,adjust_ws
+use grid, only:km,Vol,Vol_prev
+use cgem, only:ws,ff,ff_new,nf,fmin,adjust_ws
 
 implicit none
 
 logical, intent(in) :: dowrite
+integer, intent(in) :: i
 real, intent(in) :: dT
 real, dimension(km), intent(in) :: area
 integer :: km1
@@ -27,7 +28,7 @@ real, dimension(km) :: mass_in, mass_out
 
   do isp = 1,nf
 
-   if(ws(isp).gt.tiny(x)) then
+!   if(ws(isp).gt.tiny(x)) then
 
    ! !If sinking rate violates courant condition, change it
    ! if(adjust_ws) then
@@ -43,19 +44,20 @@ real, dimension(km) :: mass_in, mass_out
     mass_out(1:km1) = C(2:km)*area(2:km)*wsc*dT
     mass_out(km) = 0.
     !Don't sink out more than you started with
-    mass_out(1:km1) = AMIN1(mass_out(1:km1),C(1:km1)*Vol(1:km1))
+    mass_out(1:km1) = AMIN1(mass_out(1:km1),C(1:km1)*Vol(1:km1,i))
     !mass in should be mass out
     mass_in(2:km) = mass_out(1:km)
-    ff_new(:,isp) = ff_new(:,isp) + (mass_in(:) - mass_out(:))/Vol(:)
+    ff_new(:,isp) = (C(:)*Vol_prev(:,i) + (mass_in(:) - mass_out(:)))/Vol(:,i)
 
     do k=1,km
      if(ff_new(k,isp).lt.0) then
-      ff_new(k,isp) = 0. 
-      !write(6,'(*(g0,:,", "))') "k,isp,fold,fnew,wsc,mass_in,mass_out,m2/vol=",k,isp,C(k),ff_new(k,isp),wsc,mass_in(k),mass_out(k),(mass_in(k) - mass_out(k))/Vol(k)
+       write(6,'(*(g0,:,", "))') "k,isp,fold,fnew,wsc,mass_in,mass_out,m2/vol=",k,isp,C(k),ff_new(k,isp),wsc,mass_in(k),mass_out(k),(mass_in(k) - mass_out(k))/Vol(k,i)
+        ff_new(k,isp) = 0.
+      stop
      endif
     enddo
 
-   endif !end sink state variable
+!   endif !end sink state variable
 
   enddo
 

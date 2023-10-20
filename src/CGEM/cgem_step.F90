@@ -987,7 +987,7 @@ enddo !end k loop
   &          - AupN(:)*NH4(:)/(Ntotal(:))           &
   &          + AupP(:) + 4.8*AupP(:))*dTd
 
-  ff_new(:,iTr) = ff(:,iTr) 
+  ff_new(:,iTr) = ff(:,iTr)
 
 do k=1,km
   do isp = 1,nf

@@ -1,7 +1,6 @@
 module cgem_light
 
-use grid, only: km,d,dz,d_sfc,iYrS,lat,lon
-use cgem, only: which_irradiance,Kw,Kchla,Kspm,Kcdom,       &
+use cgem, only: nf,which_irradiance,Kw,Kchla,Kspm,Kcdom,       &
  &              aw490,astar490,astarOMA,astarOMZ,astarOMR,astarOMBC
 
 use date_time
@@ -10,33 +9,18 @@ implicit none
 
 contains
 
-   subroutine Call_IOP_PAR(                           & 
-                 & TC_8, PARsurf, totChl, CDOM_in,     &
-                 & OM1A, OM1Z, OM1R, OM1BC,           &
-                 & depth, dz, nz, d_sfc,              &
-                 & PARdepth, PARbot)
+subroutine Call_IOP_PAR(ff,TC_8,PARsurf,depth,dz,nz,d_sfc,PARdepth)
 
-!-----------------------------------------------------------------------
-! Code is based on Brad Penta's code
-!---------------------------------------------------------------------
   integer, intent(in)    :: TC_8         ! Model time in seconds from iYrS
   integer, intent(in)    :: nz           ! Number of layers
   real   , intent(in)    :: PARsurf      ! Irradiance just below sea surface
-  real   , intent(in), dimension(km)    :: totChl  ! total Chl-a (mg/m3)
-  real   , intent(in), dimension(km)    :: CDOM_in  ! CDOM_in (ppb) 
-  real   , intent(in), dimension(km)    :: OM1A    ! Concentration of particulate
-  real   , intent(in), dimension(km)    :: OM1Z    ! Concentration of particulate
-                                                   !  fecal pellets (g/m3)
-  real   , intent(in), dimension(km)    :: OM1R    ! Concentration of particulate
-                                                   !  river generated SPM (g/m3)
-  real   , intent(in), dimension(km)    :: OM1BC   ! Concentration of particulate initial
-                                                   !  and boundary condition SPM (g/m3)
   real   , intent(in)                   :: depth   ! depth at bottom of cell k from surface
-  real   , intent(in), dimension(km)    :: dz      ! depth of cell
-  real   , intent(in), dimension(km)    :: d_sfc   ! depth at center of cell k from surface
-  real  , intent(out), dimension(km)    :: PARdepth! PAR, visible irradiance at the middle 
+  real   , intent(in), dimension(nf,nz) :: ff      ! depth of cell
+  real   , intent(in), dimension(nz)    :: dz      ! depth of cell
+  real  , intent(out), dimension(nz)    :: PARdepth! PAR, visible irradiance at the middle 
                                                    !  of layer k (quanta/cm**2/sec)
-  real, intent(out)      :: PARbot                 ! PAR at sea bottom (quanta/cm**2/sec)
+  real   , intent(in), dimension(km)    :: totChl  ! total Chl-a (mg/m3)
+  real, parameter :: C_cf  = 12.0E-3    ! C conversion factor (mmol-C/m3 to g-C/m3)
 !----------------------------------------------------------------
 ! Calculate absorption (490 nm) components: seawater, chl, SPM from rivers, CDOM,
 ! detritus (dead cells), fecal pellets ...
@@ -50,13 +34,25 @@ contains
   real aOM1A490_mid, aOM1Z490_mid, aOM1R490_mid, aOM1BC490_mid
   real aOM1A490_bot, aOM1Z490_bot, aOM1R490_bot, aOM1BC490_bot
   real cell_depth  !, bd_km1
-  integer :: k  
 ! Time variables  
   real, parameter :: OneD60     = 1.0/60.0  ! Convert 1/min to 1/sec
   real            :: HrTC          ! Decimal hour of day
   integer         :: iYrTC, iMonTC, iDayTC, iHrTC, iMinTC, iSecTC !Time variables
   integer         :: julianDay     ! Holds Julian Day
 
+ !---------------------------------------------------------
+ ! -- Convert units for light model 
+ !    C_cf == conversion factor (mmol-C/m3 to g-C/m3) 
+ ! Organic Matter from dead phytoplankton (mmol/m3) 
+   OM1A(:) = ff(:,iOM1A) * C_cf
+ ! Organic Matter from fecal pellets      (mmol/m3)
+   OM1Z(:) = f(:,iOM1CZ) * C_cf
+ ! Suspended Particulate Matter (SPM)    (mmol/m3) 
+ ! There is 1.8% Organic Matter in SPM originating from the rivers.
+   OM1SPM(:) = ff(:,iOM1R) * C_cf / 0.018
+ ! Organic Matter from boundary conditions(mmol/m3) 
+   OM1BC(:)  = ff(:,iOM1BC) * C_cf
+!----------------------------------------------------------------
  ! First calculate the Julian(GMT) model year (iYrTC), month (iMonTC), 
  ! day (iDayTC), hour (iHrTC), minute (iMinTC), and second (iSecTC) 
  ! associated with the midpoint of the present timestep istep TC_8
@@ -70,13 +66,6 @@ contains
  ! for a given GMT Julian day, hour, longitude and latitude 
      sun_zenith = calc_solar_zenith(lat, lon,  HrTC, julianDay )
 
-#ifdef DEBUG_PAR
-write(6,*) "Begin Call_IOP_Par"
-write(6,*) "PARsurf,sun_zenith,totChl",PARsurf,sun_zenith,totChl
-write(6,*) "nz,km",nz,km
-#endif
-
-
 ! First, convert CDOM(ppb) into CDOM, a490 (m-1)
 ! Once the CDOM (QSE ppb) is in the model domain, we advect and mix using the same 
 ! routine as for other dissolved constituents. However, to use the CDOM in the light 
@@ -85,7 +74,7 @@ write(6,*) "nz,km",nz,km
 ! 2) convert a312 to a490: a490 = a312*exp(-0.016*(490-312)), where here S = 0.016 
 ! (mean value from D'Sa and DiMarco (2008)
    do k=1,nz
-      CDOM(k) = (CDOM_in(k) - 0.538)/2.933 !ppb to a312
+      CDOM(k) = (ff(k,iCDOM) - 0.538)/2.933 !ppb to a312
       CDOM(k) = CDOM(k) * exp(-0.016*(490.-312.))
       CDOM(k) = AMAX1(CDOM(k),0.)
    enddo 
@@ -94,107 +83,59 @@ write(6,*) "nz,km",nz,km
 write(6,*) "Call_IOP_Par: initialized CDOM"
 #endif
 
-
-!Initialize counters for Chla, CDOM, and detritus:
-   Chla_tot = 0.
-   CDOM_tot = 0.
-   OM1A_tot = 0.
-   OM1Z_tot = 0.
-   OM1R_tot = 0.
-   OM1BC_tot = 0.
-!   bd_km1 = 0.
+do k = 1, nz 
+    Chla_mass(k) = 0.0
+    do isp = 1, nospA
+      Chla_mass(k) =  Chla_mass(k) + ff(iA(isp),k) * ff(iQc(isp),k) * 12. * (1./CChla(isp))
+    enddo ! isp = 1, nospA
+  enddo ! k = 1, km
 
 !Mass in each cell at layer k (area of volume part cancels out)
 !The unit is (g C)
-   do k=1,nz
 !      cell_depth = bottom_depth(k) - bd_km1
 !      bd_km1 = bottom_depth(k)
-      cell_depth = dz(k)
-      Chla_mass(k) = totChl(k)*cell_depth
-      CDOM_mass(k) = CDOM(k)*cell_depth
-      OM1A_mass(k) = OM1A(k)*cell_depth
-      OM1Z_mass(k) = OM1Z(k)*cell_depth
-      OM1R_mass(k) = OM1R(k)*cell_depth
-      OM1BC_mass(k) = OM1BC(k)*cell_depth
-   enddo
-
-
-#ifdef DEBUG
-write(6,*) "Call_IOP_Par:cell mass"
-#endif
+      Chla_mass(:) = totChl(:)*Vol(:)
+      CDOM_mass(:) = CDOM(:)*Vol(:)
+      OM1A_mass(:) = OM1A(:)*Vol(:)
+      OM1Z_mass(:) = OM1Z(:)*Vol(:)
+      OM1R_mass(:) = OM1R(:)*Vol(:)
+      OM1BC_mass(:) = OM1BC(:)*Vol(:)
 
 !Mass from surface to center of cell at layer k
 !Is the sum of the mass of all previous k layers plus 
 !half of the current k layer 
-!Concentration is that divided by the distance
-!from the surface to the center of cell at layer k
-!(Division by d_sfc is in the next loop)  
+!Concentration is mass/Vol 
+      Vol_tot(1)  = 0.5*Vol(1)
       Chla_tot(1) = 0.5*Chla_mass(1)
       CDOM_tot(1) = 0.5*CDOM_mass(1)
       OM1A_tot(1) = 0.5*OM1A_mass(1)
       OM1Z_tot(1) = 0.5*OM1Z_mass(1)
       OM1R_tot(1) = 0.5*OM1R_mass(1)
       OM1BC_tot(1) = 0.5*OM1BC_mass(1)
-   do k=2,nz
-      Chla_tot(k)  = 0.5*Chla_mass(k) + SUM(Chla_mass(1:k-1))
-      CDOM_tot(k)  = 0.5*CDOM_mass(k) + SUM(CDOM_mass(1:k-1))
-      OM1A_tot(k)  = 0.5*OM1A_mass(k) + SUM(OM1A_mass(1:k-1))
-      OM1Z_tot(k)  = 0.5*OM1Z_mass(k) + SUM(OM1Z_mass(1:k-1))
-      OM1R_tot(k)  = 0.5*OM1R_mass(k) + SUM(OM1R_mass(1:k-1))
-      OM1BC_tot(k) = 0.5*OM1BC_mass(k)+ SUM(OM1BC_mass(1:k-1))
-   enddo
 
-#ifdef DEBUG
-write(6,*) "Call_IOP_Par:total mass"
-#endif
-
-#ifdef DEBUG
-write(6,*) "Call_IOP_Par:depth,dz,d_sfc:",depth,dz,d_sfc
-#endif
-
+      Vol_tot(2:nz)  = 0.5*Vol(2:nz) + SUM(Vol(1:k-1))
+      Chla_tot(2:nz)  = 0.5*Chla_mass(2:nz) + SUM(Chla_mass(1:k-1))
+      CDOM_tot(2:nz)  = 0.5*CDOM_mass(2:nz) + SUM(CDOM_mass(1:k-1))
+      OM1A_tot(2:nz)  = 0.5*OM1A_mass(2:nz) + SUM(OM1A_mass(1:k-1))
+      OM1Z_tot(2:nz)  = 0.5*OM1Z_mass(2:nz) + SUM(OM1Z_mass(1:k-1))
+      OM1R_tot(2:nz)  = 0.5*OM1R_mass(2:nz) + SUM(OM1R_mass(1:k-1))
+      OM1BC_tot(2:nz) = 0.5*OM1BC_mass(2:nz)+ SUM(OM1BC_mass(1:k-1))
 
    do k=1,nz
 !Calculate absorption coefficients:
       aSw_mid = aw490  !Sea water absorption at mid cell
-      aChl490_mid = astar490 * Chla_tot(k) / d_sfc(k)        !Chla absorption at mid cell
-      aCDOM490_mid = CDOM_tot(k) / d_sfc(k)        !CDOM absorption at mid cell
-      aOM1A490_mid = astarOMA * OM1A_tot(k) / d_sfc(k) ! absorption at mid cell
-      aOM1Z490_mid = astarOMZ * OM1Z_tot(k) / d_sfc(k) ! absorption at mid cell
-      aOM1R490_mid = astarOMR * OM1R_tot(k) / d_sfc(k) ! absorption at mid cell
-      aOM1BC490_mid = astarOMBC * OM1BC_tot(k) / d_sfc(k) ! absorption at mid cell
+      aChl490_mid = astar490 * Chla_tot(k) / Vol_tot(k)        !Chla absorption at mid cell
+      aCDOM490_mid = CDOM_tot(k) / Vol_tot(k)        !CDOM absorption at mid cell
+      aOM1A490_mid = astarOMA * OM1A_tot(k) / Vol_tot(k) ! absorption at mid cell
+      aOM1Z490_mid = astarOMZ * OM1Z_tot(k) / Vol_tot(k) ! absorption at mid cell
+      aOM1R490_mid = astarOMR * OM1R_tot(k) / Vol_tot(k) ! absorption at mid cell
+      aOM1BC490_mid = astarOMBC * OM1BC_tot(k) / Vol_tot(k) ! absorption at mid cell
       a490_mid = aSw_mid + aChl490_mid + aCDOM490_mid + aOM1A490_mid + aOM1Z490_mid + aOM1R490_mid + aOM1BC490_mid
 !Calculate backscattering coefficients:
-      bbChl490_mid = 0.015 * (0.3*((Chla_tot(k) / d_sfc(k))**0.62)*(550./490.)) !Chla backscatter at mid cell
+      bbChl490_mid = 0.015 * (0.3*((Chla_tot(k) / Vol_tot(k))**0.62)*(550./490.)) !Chla backscatter at mid cell
       bb490_mid = bbChl490_mid !Only Chla backscatters for now
-! Calculate PAR at depth
-      !Why would we check if a490_mid=0??
-      !If it is zero, stop.
-      !  if(a490_mid.le.0) then
-      !     write(6,*) k,CDOM(k),CDOM_k(k)
-      !     write(6,*) "a490_mid.le.0, =",a490_mid,aSw_mid,aChl490_mid,aCDOM490_mid
-      !     !stop
-      !  endif
       call IOP_PARattenuation(a490_mid, bb490_mid, PARsurf, sun_zenith, d_sfc(k), PARdepth(k)) 
-
-#ifdef DEBUG
-write(6,*) "Just called IOP_Paratt, PARdepth=:",k,PARdepth(k)
-#endif
-
    enddo
-
-! Calculate PAR at sea bottom
-      aSw_bot = aw490  !Sea water absorption at bottom of cell
-      aChl490_bot = astar490 * (Chla_tot(nz)+0.5*Chla_mass(nz)) / depth !Chla absorption at bottom
-      aCDOM490_bot = CDOM_tot(nz)+(0.5*CDOM_mass(nz)) / depth !CDOM absorption at bottom
-      aOM1A490_bot = astarOMA * (OM1A_tot(nz)+0.5*OM1A_mass(nz)) / depth    !A absorption at bottom
-      aOM1Z490_bot = astarOMZ * (OM1Z_tot(nz)+0.5*OM1Z_mass(nz)) / depth !FP absorption at bottom
-      aOM1R490_bot = astarOMR * (OM1R_tot(nz)+0.5*OM1R_mass(nz)) / depth !SPM absorption at bottom
-      aOM1BC490_bot = astarOMbc * (OM1BC_tot(nz)+0.5*OM1BC_mass(nz)) / depth !INIT/BC absorption at bottom
-      a490_bot = aSw_bot + aChl490_bot + aCDOM490_bot + aOM1A490_bot + aOM1Z490_bot + aOM1R490_bot + aOM1BC490_bot
-      bbChl490_bot = 0.015 * (0.3*(((Chla_tot(nz)+0.5*Chla_mass(nz)) / depth)**0.62)*(550./490.))
-!!Chla backscatter at bottom
-      bb490_bot = bbChl490_bot !Only Chla backscatters for now
-      call IOP_PARattenuation(a490_bot, bb490_bot, PARsurf, sun_zenith, d_sfc(nz), PARbot)
 
    END subroutine Call_IOP_PAR
 !----------------------------------------------------------------------
@@ -253,157 +194,6 @@ write(6,*) "Just called IOP_Paratt, PARdepth=:",k,PARdepth(k)
 
       return
       end
-!*****************************************************************************************
 
-subroutine calc_PARdepth( TC_8,PARSurf,S,Chla,CDOM,OM1A_in,OM1Z_in,      &
- &                         OM1R_in,OM1BC_in,PARdepth,PARbot )
-
-!---------------------------------------------
-! Interface variables
-!---------------------------------------------------------------------
-    !Inputs
-    integer, intent(in)              :: TC_8              ! Model time (seconds from iYrS)
-    real, dimension(km), intent(in)  :: S                 ! Salinity (psu)
-    real, dimension(km), intent(in)  :: Chla              ! Total amount of Chl-a in all the
-                                                          !  phytoplankton species (mg/m3) per cell
-    real, dimension(km), intent(in)  :: OM1A_in, OM1Z_in  !  
-    real, dimension(km), intent(in)  :: OM1R_in, OM1BC_in ! POC in g/m3
-    real, dimension(km), intent(in)  :: CDOM              ! CDOM, ppb
-    real,                intent(in)  :: PARsurf           ! Irradiance just below the sea surface (quanta/cm2/s) 
-    !Outputs
-    real, dimension(km), intent(out) :: PARdepth          ! Irradiance at center of layer k (quanta/cm2/s)
-    real,                intent(out) :: PARbot            !Irradiance at sea floor (quanta/cm2/s)
-!---------------------------------------------------------------------------------------
-! Local Variables
-!-----------------------------------------------------
-    real, dimension(km)  :: OM1A, OM1Z    ! POC in mmol/m3 
-    real, dimension(km)  :: OM1SPM, OM1BC ! POC in mmol/m3
-
-    integer        ::  k    ! Loop index
-!------------------------------------ 
-! Variables needed for light routine and calc_Agrow
-    real    :: Katt               ! Attenuation coefficient for Irradiance model 2 
-    real    :: tmpexp             ! Intermediate calculation
-    real    :: PARbotkm1          ! Irradiance at bottom of layer k-1 (quanta/cm2/s)
-    real    :: PARtopk            ! Irradiance at top of layer k (quanta/cm2/s)
-    real, parameter :: C_cf  = 12.0E-3    ! C conversion factor (mmol-C/m3 to g-C/m3) 
-!-----------------------------------------------------------------------
-#ifdef DEBUG_PAR
-write(6,*) "Begin calc_light:calc_PARdepth, TC_8",TC_8
-#endif
-
-!-----------------------------------------------------------------
-!   Begin main ij loop for the biogeochemistry 
-!   calculations at time-level istep
-!-----------------------------------------------------------------
- !---------------------------------------------------------
- ! Calculate and convert variables needed for light routine
- !---------------------------------------------------------
- !-------------------------------------------------
- ! -- Convert units for light model 
- !    C_cf == conversion factor (mmol-C/m3 to g-C/m3) 
- !-----
- ! Organic Matter from dead phytoplankton (mmol/m3) 
- !            converted to equivalent (g carbon/m3)
-   OM1A(:) = OM1A_in(:) * C_cf        
- !-----
- ! Organic Matter from fecal pellets      (mmol/m3)
- !            converted to equivalent (g carbon/m3)
-   OM1Z(:) = OM1Z_in(:) * C_cf   
- !-----
- ! Organic Matter from rivers            
- !  Suspended Particulate Matter (SPM)    (mmol/m3) 
- !            converted to equivalent (g carbon/m3)
- ! There is 1.8% Organic Matter in SPM originating from the rivers.
-   OM1SPM(:) = OM1R_in(:) * C_cf / 0.018
- !-----
- ! Organic Matter from boundary conditions(mmol/m3) 
- !            converted to equivalent (g carbon/m3)
-   OM1BC(:)  = OM1BC_in(:) * C_cf 
-
-!----------------------------------------------------------------------
-! Execute the desired atmospheric light model.  To calculate PARsurf,
-! the effect amount of downward spectrally integrated irradiance 
-! just below the sea surface.  'Rad' is just above sea surface. 
-!----------------------------------------------------------------------
-#ifdef DEBUG_PAR
-write(6,*) "In cgem_light:calc_PARdepth, calculate date_time is next, iYrS=",iYrS
-#endif
-
-!----------------------------------------------------------------------------
-! Execute the desired underwater light model to calculate the 1-D radiation
-! arrays PARdepth, Esed and PAR_percent radiation arrays for
-! vertical grid column (i).
-!
-! PARdepth(k) is the downward irradiance (photons/cm2/sec) at the middle
-!                    of cell(k).
-!
-! PARbot is the downward irradiance (photons/cm2/sec) at the sea bottom
-!
-! PAR_percent(k)    is the % of incoming irradiance PARsurf that PARdepth(k)
-!                 represents. PARsurf is the downward irradiance
-!                 (photons/cm2/sec) just below the sea surface.
-!-------------------------------------------------------------------------
- select case (which_irradiance)
-
-         !--------------------------------------------
- case (1)! Upgraded form of the underwater light model
-         ! developed by Brad Penta of NRL is used
-         !--------------------------------------------
-
-#ifdef DEBUG_PAR
-  write(6,*) "In calc_PARdepth, calling Brad's light model, km,PARsurf=",km,PARsurf
-#endif
-
-        call Call_IOP_PAR(                    &
-         & TC_8, PARsurf, Chla, CDOM,     &
-         & OM1A, OM1Z, OM1SPM, OM1BC, &
-         & d(km), dz, km, d_sfc,              &
-         & PARdepth, PARbot)
-
-#ifdef DEBUG_PAR
-     write(6,*) "In cgem_light:calc_PARdepth."
-     write(6,*) "PARdepth,PARbot=",PARdepth
-     write(6,*) "PARbot=",PARbot
-#endif
-
-         !-------------------------------------------------
- case (2)! Upgraded form of the original underwater light
-         ! model of Pete Eldridge is used. Now accounts for
-         ! light attenuation in each k layer rather than for the whole
-         ! mixed layer as in the Eldridge & Roelke(2010) code 
-         !-------------------------------------------------
-         PARbotkm1 = PARsurf             ! initialize at top of
-                                         ! column i., i.e.
-                                         ! at bottom of layer "zero".
-         do k = 1, km
-           !Calculate attenuation coefficient
-             Katt    = Kw                                                   &
-             &       + Kchla * Chla(k)                                    &
-             &       + Kspm  * (OM1SPM(k)+OM1A(k)+OM1Z(k)+OM1BC(k)) &
-             &       + Kcdom * CDOM(k)                                    &
-             &       + (((0.0022*S(k))-0.158)*S(k)+3.03)
-             PARtopk = PARbotkm1         ! irradiance at top of
-                                         ! layer k is same as
-                                         ! irradiance at bottom
-                                         ! of layer km1
-             tmpexp  = exp(-0.5*Katt*dz(k))
-             PARdepth(k) = PARtopk * tmpexp    ! irradiance at middle of layer k
-             PARbot  = PARdepth(k) * tmpexp    ! irradiance at bottom of layer k
-             PARbotkm1 = PARbot         ! reinitialize for next top layer
-         enddo 
-
- case default
-     write(6,*) "Error in irradiance switch",which_irradiance
-     stop
- end select
-!---------------------End Underwater Light Model-----------------------------------
-#ifdef DEBUG_PAR
-write(6,*) "In cgem_light:calc_PARdepth, Finished Underwater Light Model"
-#endif
-
-   return
-   end subroutine calc_PARdepth  
 !---------------------------------------------------------------------- 
-
 end module

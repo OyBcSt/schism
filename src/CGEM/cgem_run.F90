@@ -6,8 +6,8 @@
 !==============================================================================
 subroutine cgem_run(istep,myrank)
   use schism_glbl, only : rkind,nea,idry_e,irange_tr,flx_sf,flx_bt,bdy_frc,&
-   & nvrt,kbe,dpe,tr_el,dt,srad,elnode,i34,windx,windy,area,ze,wsett
-  use grid, only : T,S,km,dz,Vol,d,d_sfc,START_SECONDS,Wind,Rad
+   & nvrt,kbe,dp,dpe,tr_el,dt,srad,elnode,i34,windx,windy,area,ze,wsett
+  use grid, only : T,S,km,dz,Vol,Vol_prev,d,d_sfc,START_SECONDS,Wind,Rad
   use cgem, only: ws,ff,ff_new,skipcgem,checkwindrad,sinkwcgem
 
   implicit none
@@ -27,8 +27,9 @@ subroutine cgem_run(istep,myrank)
 !Just say Hi in mirror.out
   if(myrank==0) write(16,*) "In cgem_run: istep,dt=",istep,dt
 
-!dt does not pass through cgem_step function properly by itself
-  cgemdt = dt
+  if(istep.ne.1) then
+     !dt does not pass through cgem_step function properly by itself
+     cgemdt = dt
 
 !Time in seconds since start of run
   TC_8 = START_SECONDS + istep*int(dt)
@@ -68,7 +69,7 @@ subroutine cgem_run(istep,myrank)
       T(im)= tr_el(1,k,i)
       S(im)= tr_el(2,k,i)
       dz(im) = ze(k,i)-ze(k-1,i)
-      Vol(im) = (ze(k,i)-ze(k-1,i))*area(i)
+      Vol(im,i) = (ze(k,i)-ze(k-1,i))*area(i)
       cgemarea(im) = area(i)
       im = im-1
     enddo
@@ -105,7 +106,7 @@ else
 endif 
   
   if(sinkwcgem) then
-    call cgem_sink(cgemdt,cgemarea,dowrite)
+    call cgem_sink(cgemdt,cgemarea,dowrite,i)
     do m=itmp1,itmp2
       wsett(m,:,i) = 0.
     enddo
@@ -132,8 +133,24 @@ endif
      mm = mm+1
     enddo !m
 
-
+    Vol_prev(:,i) = Vol(:,i)
   enddo !i=1,nea
+
+ else
+    do i=1,nea
+      !if(idry_e(i)==1) cycle
+      im = km
+       do k=kbe(i)+1,nvrt
+       if(idry_e(i).ne.1) Vol_prev(im,i) = (ze(k,i)-ze(k-1,i))*area(i)
+       if(idry_e(i)==1) Vol_prev(im,i) = abs(dpe(i))/real(km)*area(i)
+       if(idry_e(i).ne.1) write(6,'(*(g0,:,", "))') i,im,Vol_prev(im,i),area(i),(ze(k,i)-ze(k-1,i))
+       if(idry_e(i)==1)  write(6,'(*(g0,:,", "))') i,im,Vol_prev(im,i),area(i),abs(dpe(i))/real(km)
+         im = im-1
+       enddo
+    enddo
+    write(6,*) "Initializing Vol_prev",istep,myrank,i
+ endif
+
 
 
 return
