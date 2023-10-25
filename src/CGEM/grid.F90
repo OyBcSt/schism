@@ -3,7 +3,7 @@ module grid
 !CGEM STATE VARIABLES
 use date_time
 use, intrinsic :: iso_fortran_env, only: stderr => error_unit
-use schism_glbl, only: nea 
+use schism_glbl, only: nea,rkind
 
 implicit none
 
@@ -27,12 +27,9 @@ real :: Rad, Wind
 !Lat/lon of elements
 real :: lat,lon
 !Depth stuff
-real, allocatable :: d(:) ! depth cell bottom to surface
-real, allocatable :: d_sfc(:) ! depth cell center to surface 
-real, allocatable :: dz(:)   !Thickness of cell
-real, allocatable :: Vol(:,:)
-real, allocatable :: Vol_prev(:,:)  !Volume of a cell
-real, allocatable :: area(:) ! Area of a cell
+real(rkind), allocatable :: d(:) ! depth cell bottom to surface
+real(rkind), allocatable :: d_sfc(:) ! depth cell center to surface 
+real(rkind), allocatable :: dz(:)   !Thickness of cell
 !'tracers'
 real, allocatable :: S(:),T(:)
 
@@ -81,10 +78,6 @@ allocate(d_sfc(km),stat=ierr) ! depth cell center to surface
 if(ierr.ne.0) write(6,*) "error in allocating:d_sfc"
 allocate(dz(km),stat=ierr) !Thickness of cell
 if(ierr.ne.0) write(6,*) "error in allocating:dz"
-allocate(Vol(km,nea),stat=ierr) !Volume of cell
-if(ierr.ne.0) write(6,*) "error in allocating:Vol"
-allocate(Vol_prev(km,nea),stat=ierr) !Volume of cell
-if(ierr.ne.0) write(6,*) "error in allocating:Vol_prev"
 !SCHISM 'tracers'
 allocate(S(km),stat=ierr) ! Salinity (psu) 
 if(ierr.ne.0) write(6,*) "error in allocating:S"

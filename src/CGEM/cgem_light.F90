@@ -31,9 +31,9 @@ contains
                                                    !  river generated SPM (g/m3)
   real   , intent(in), dimension(km)    :: OM1BC   ! Concentration of particulate initial
                                                    !  and boundary condition SPM (g/m3)
-  real   , intent(in)                   :: depth   ! depth at bottom of cell k from surface
-  real   , intent(in), dimension(km)    :: dz      ! depth of cell
-  real   , intent(in), dimension(km)    :: d_sfc   ! depth at center of cell k from surface
+  real*8   , intent(in)                   :: depth   ! depth at bottom of cell k from surface
+  real*8   , intent(in), dimension(km)    :: dz      ! depth of cell
+  real*8   , intent(in), dimension(km)    :: d_sfc   ! depth at center of cell k from surface
   real  , intent(out), dimension(km)    :: PARdepth! PAR, visible irradiance at the middle 
                                                    !  of layer k (quanta/cm**2/sec)
   real, intent(out)      :: PARbot                 ! PAR at sea bottom (quanta/cm**2/sec)
@@ -228,7 +228,8 @@ write(6,*) "Just called IOP_Paratt, PARdepth=:",k,PARdepth(k)
 ! Air/Sea interface - this is included already in the data 
 
 ! Define coefficients for light attenuation model       
-      real a490, alpha0, alpha1, alpha2, bb490, chi0, chi1, chi2, d_sfc
+      real a490, alpha0, alpha1, alpha2, bb490, chi0, chi1, chi2
+      real*8 d_sfc
       real k1, k2, kpar, PARdepth, PARsurf, sun_zenith, zeta0, zeta1
       real zeta2 
      

@@ -8797,8 +8797,9 @@
           write(it_char,'(i72)')i
           it_char=adjustl(it_char); lit=len_trim(it_char)
           itmp=irange_tr(1,3)+i-1 !tracer #
-          if(iof_gen(i)==1) call writeout_nc(id_out_var(noutput+i+4), &
-     &'GEN_'//it_char(1:lit),2,nvrt,npa,tr_nd(itmp,:,:))
+!!!L3!!          if(iof_gen(i)==1) call writeout_nc(id_out_var(noutput+i+4), &
+!!!L3!!     &'GEN_'//it_char(1:lit),2,nvrt,npa,tr_el(itmp,:,:))
+          if(iof_gen(i)==1) call writeout_nc(id_out_var(noutput+i+4),'GEN_'//it_char(1:lit),6,nvrt,nea,tr_el(itmp,:,:))
         enddo !
         noutput=noutput+ntrs(3)
 #endif

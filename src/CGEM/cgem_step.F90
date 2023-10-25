@@ -159,8 +159,10 @@
     real :: patm(1) = 1.
     real :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
     real :: m_lat(1)
+    real :: m_d_sfc(km)
 !mocsy needs lat to be an array
     m_lat = lat
+    m_d_sfc = d_sfc
 
 !convert to timestep in days
   dTd = dt/SDay
@@ -635,7 +637,7 @@ write(6,*) "In cgem, called Nitrification"
         m_si  = Si(k)/1000.
         m_po4 = PO4(k)/1000.
         call vars(ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
-         &    T(k), S(k), m_alk, m_dic, m_si, m_po4, patm, d_sfc(k), m_lat, 1, &
+         &    T(k), S(k), m_alk, m_dic, m_si, m_po4, patm, m_d_sfc(k), m_lat, 1, &
          &    'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
         pH(k) = ph_calc(1)
 #ifdef DEBUG

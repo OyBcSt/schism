@@ -3,8 +3,7 @@ module cgem
 !CGEM STATE VARIABLES
 use, intrinsic :: iso_fortran_env, only: stderr => error_unit
 use grid, only: km
-use schism_glbl, only : nea
-!use schism_glbl, only: rkind
+use schism_glbl, only : nea,rkind
 
 implicit none
 
@@ -12,6 +11,7 @@ save
 
 !Write or not
 logical sinkwcgem,adjust_ws
+real*8 :: adjust_fac
 
 !number of species
 integer :: nospA
@@ -19,13 +19,13 @@ integer :: nospZ
 
 !misc
 integer :: skipcgem,checkwindrad,writecsv,debug
-real :: eps
+real :: eps,h_massconsv
 
 !constants
 real, parameter :: SDay = 86400.
 
 !Sinking
-real, dimension(:), allocatable :: ws
+real*8, dimension(:), allocatable :: ws
 real, dimension(:), allocatable :: fmin
 real :: x !for tiny
 
@@ -167,8 +167,8 @@ integer, parameter :: i_Si      = 9 !Silica (SA, SRP) Fluxes
       integer :: nf
 
 !State Variable Array
-      real,allocatable :: ff(:,:) !state variable array
-      real, allocatable :: ff_new(:,:) !sources array
+      real(rkind),allocatable :: ff(:,:) !state variable array
+      real(rkind), allocatable :: ff_new(:,:) !sources array
 
 !----INPUT_VARS_CGEM
 !--Switches in GEM---------
@@ -283,7 +283,7 @@ subroutine cgem_dim
   integer           :: istat,iunit
   character(len=1000) :: line
   !http://degenerateconic.com/namelist-error-checking.html
-  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug,sinkwcgem,adjust_ws
+  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug,sinkwcgem,adjust_ws,adjust_fac,h_massconsv
 
 #ifdef DEBUG
 write(6,*) "Begin cgem_dim"
@@ -815,7 +815,7 @@ write(6,*) "ws",ws
 
 
 !Convert per m/d to m/s 
-ws = ws / SDay
+!ws = ws / SDay
 
 
 #ifdef DEBUG
