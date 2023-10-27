@@ -642,8 +642,7 @@
      &                       nws ) 
 #endif /*USE_ATMOS*/
 
-!$OMP parallel default(shared) private(i,j)
-!$OMP       do
+!$OMP parallel do default(shared) private(i)
             do i=1,npa
               sflux(i)=-fluxsu(i)-fluxlu(i)-(hradu(i)-hradd(i)) !junk at dry nodes
 #ifdef USE_MICE
@@ -662,11 +661,11 @@
 !              endif
 #endif
             enddo !i
-!$OMP       end do
+!$OMP end parallel do
 
             !Turn off precip near land bnd
             if(iprecip_off_bnd/=0) then
-!$OMP         do
+!$OMP parallel do default(shared) private(i,j)
               loop_prc: do i=1,np
                 if(isbnd(1,i)==-1) then
                   fluxprc(i)=0.d0; cycle loop_prc
@@ -678,8 +677,7 @@
                   endif
                 enddo !j
               end do loop_prc !i=1,np
-!$OMP         end do
-!$OMP end parallel
+!$OMP end parallel do
               call exchange_p2d(fluxprc)
             endif !iprecip_off_bnd
 
@@ -1333,7 +1331,7 @@
       
         rat=(time-th_time(1,1,1))/th_dt(1,1)
         if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: rat out in elev.th:',rat,time,th_time(1,1:2,1)
+          write(errmsg,*) 'STEP: rat out in elev.th:',rat,time,th_time(1,1:2,1),th_dt(1,1)
           call parallel_abort(errmsg)
         endif
         icount=0
@@ -1391,7 +1389,7 @@
 
             rat=(time-th_time(m,1,5))/th_dt(m,5)
             if(rat<-small1.or.rat>1.d0+small1) then
-              write(errmsg,*) 'STEP: rat out in htr_.th:',rat,time,th_time(m,1:2,5)
+              write(errmsg,*) 'STEP: rat out in htr_.th:',rat,time,th_time(m,1:2,5),th_dt(m,5)
               call parallel_abort(errmsg)
             endif
             icount=0
@@ -1427,7 +1425,7 @@
 
         rat=(time-th_time2(1,1))/th_dt2(1)
         if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: rat out in elev2D.th:',rat,time,th_time2(1:2,1)
+          write(errmsg,*) 'STEP: rat out in elev2D.th:',rat,time,th_time2(1:2,1),th_dt2(1)
           call parallel_abort(errmsg)
         endif
         icount=0
@@ -1478,7 +1476,7 @@
 
         rat=(time-th_time2(1,2))/th_dt2(2)
         if(rat<-small1.or.rat>1.d0+small1) then
-          write(errmsg,*) 'STEP: rat out in uv3D.th:',rat,time,th_time2(1:2,2)
+          write(errmsg,*) 'STEP: rat out in uv3D.th:',rat,time,th_time2(1:2,2),th_dt2(2)
           call parallel_abort(errmsg)
         endif
         icount=0
@@ -1534,7 +1532,7 @@
         if(ntrs(i)>0.and.nnode_tr2(i)>0) then
           rat=(time-th_time2(1,5))/th_dt2(5)
           if(rat<-small1.or.rat>1.d0+small1) then
-            write(errmsg,*) 'STEP: rat out in tr3D.th:',rat,time,th_time2(1:2,5)
+            write(errmsg,*) 'STEP: rat out in tr3D.th:',rat,time,th_time2(1:2,5),th_dt2(5)
             call parallel_abort(errmsg)
           endif
 !          icount=0
@@ -2659,7 +2657,9 @@
           !u_taub=((1.d0/cw)*sqrt(taub_wc(j))**3)**(1./3.) !opt3
 #else
           u_taus=sqrt(sqrt(tau(1,j)**2.d0+tau(2,j)**2.d0))
-          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
+!          u_taub=sqrt(Cdp(j)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
+          !GOTM seems to dislike 0 friction
+          u_taub=sqrt(max(Cdp(j),1.d-10)*(uu2(kbp(j)+1,j)**2.d0+vv2(kbp(j)+1,j)**2.d0))
 #endif
           nlev=nvrt-kbp(j) !>1
           do k=0,nlev 
@@ -2722,7 +2722,8 @@
           z0s=min(0.1d0,toth/10.d0)
 #endif
           if(Cdp(j)==0.d0) then
-            z0b=0.d0
+            !GOTM seems to dislike 0 friction
+            z0b=1.d-10 !0.d0
           else
             z0b=(znl(kbp(j)+1,j)-znl(kbp(j),j))*exp(-0.4d0/sqrt(Cdp(j)))
           endif
@@ -8687,14 +8688,14 @@
 #endif
       if(myrank==0) then
         write(9,'(f16.6,20000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,1)
-        if(iflux_out_format/=0) then
+        if(iflux==2) then
           write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2)
           write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,3)
           do m=1,ntracers
             write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+2)
             write(9,'(f16.6,6000(1x,e14.4))')time/86400.d0,fluxes_tr_gb(1:max_flreg,2*m+3)
           enddo !m
-        endif !iflux_out_format
+        endif !iflux
         write(16,*)'done computing fluxes...'
       endif
 !$OMP end master
