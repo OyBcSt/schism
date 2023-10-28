@@ -45,12 +45,12 @@ km1 = km-1
      d_mass = mass_in - mass_out
      ff_new(:,isp) = C(:) + d_mass(:)/dz(:)*dt
 
-    if(isp.eq.1.and.i.eq.10.and.myrank.eq.1) then
-            write(6,'(*(g0,:,", "))') istep,i,isp,SUM(C),SUM(ff_new(:,isp))
+!    if(isp.eq.1.and.i.eq.10.and.myrank.eq.1) then
+!            write(6,'(*(g0,:,", "))') istep,i,isp,SUM(C),SUM(ff_new(:,isp))
             !do k=1,km
             !write(6,'(*(g0,:,", "))') C(k),ff_new(k,isp),mass_in(k),mass_out(k),d_mass(k),dz(k)
             !enddo
-    endif
+!    endif
 
 !    if(ABS(SUM(C*dz)-SUM(ff_new(:,isp)*dz(:))).gt.1.e-8) then
 !        write(6,'(*(g0,:,", "))') istep,isp,SUM(ff_new(:,isp)),SUM(C),SUM(C*dz),SUM(ff_new(:,isp)*dz(:)),MINVAL(dz)
