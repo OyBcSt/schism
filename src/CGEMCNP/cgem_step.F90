@@ -1,5 +1,5 @@
 !======================================================================     
-  Subroutine cgem_step( dT, S, T, PAR, lat, d_sfc, is_bottom, is_day )
+  Subroutine cgem_step( ff,ff_new,dT, S, T, PAR, Wind, lat, d_sfc, is_bottom, is_day )
 
 !======================================================================
   use cgem
@@ -7,6 +7,7 @@
   use cgem_utils
   use date_time
   use mvars
+  use schism_glbl, only : rkind
 
   IMPLICIT NONE
 
@@ -15,10 +16,13 @@
 !---------------------------------------------------------------------
   logical, intent(in)  :: is_bottom ! Is it the bottom?  For instant remineralization
   logical, intent(in)  :: is_day    ! Uptake only occurs during the day
-  real, intent(in)     :: lat       ! For mocsy- latitude 
-  real, intent(in)     :: d_sfc     ! For mocsy
-  real, intent(in)     :: PAR       ! PAR at cell center
-  real, intent(in)     :: S,T,dT
+  real(rkind), intent(in)     :: lat       ! For mocsy- latitude 
+  real(rkind), intent(in)     :: d_sfc     ! For mocsy
+  real(rkind), intent(in)     :: PAR       ! PAR at cell center
+  real(rkind), intent(in)     :: Wind 
+  real(rkind), intent(in)     :: S,T,dT
+  real(rkind),intent(in), dimension(nf) :: ff
+  real(rkind),intent(out), dimension(nf) :: ff_new
 !---------------------------------------------------------------------------------------
 ! Local Variables
 !-----------------------------------------------------
@@ -26,125 +30,125 @@
 !------------------------------------ 
 ! Phytoplankton parameters
 ! Phytoplankton uptake and growth
-  real, dimension(nospA) :: A     ! Zooplankton number density (indv./m3)
-  real, dimension(nospA) :: Agrow ! Phytoplankton growth (cells/m3/d)
-  real, dimension(nospA) :: Aresp ! Total respiration from a phytoplankton group (cells/m3/d)
-  real, dimension(nospA) :: uA    ! Specific growth rate (1/d)
-  real, dimension(nospA) :: uN    ! Nitrogen Limited growth rate (1/d)
-  real, dimension(nospA) :: uP    ! Phosphorus limited growth rate (1/d)
-  real, dimension(nospA) :: uE    ! Light limited growth rate (1/d)
-  real, dimension(nospA) :: uSi   ! Silica limited growth rate (1/d)
-  real, dimension(nospA) :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
-  real, dimension(nospA) :: Qp    ! Phytoplankton Phosphorus Quota (mmol-P/cell)
-  real, dimension(nospA) :: f_Qn  ! Quota model for N
-  real, dimension(nospA) :: f_Qp  ! Quota model for P
-  real, dimension(nospA) :: vN    ! Phytoplankton uptake rate of Nitrogen (mmol-N/cell/d)
-  real, dimension(nospA) :: vP    ! Phytoplankton uptake rate of Phosphorus (mmol-P/cell/d)
-  real, dimension(nospA) :: vSi   ! Phytoplankton uptake rate of Silica (mmol-Si/cell/d)
-  real                   :: AupN  ! Total Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
-  real                   :: AupP  ! Total Phytoplankton uptake of Phosphorus (mmol-P/m3/d)
-  real                   :: AupSi ! Total Phytoplankton uptake of Silica (mmol-Si/m3/d)
+  real(rkind), dimension(nospA) :: A     ! Zooplankton number density (indv./m3)
+  real(rkind), dimension(nospA) :: Agrow ! Phytoplankton growth (cells/m3/d)
+  real(rkind), dimension(nospA) :: Aresp ! Total respiration from a phytoplankton group (cells/m3/d)
+  real(rkind), dimension(nospA) :: uA    ! Specific growth rate (1/d)
+  real(rkind), dimension(nospA) :: uN    ! Nitrogen Limited growth rate (1/d)
+  real(rkind), dimension(nospA) :: uP    ! Phosphorus limited growth rate (1/d)
+  real(rkind), dimension(nospA) :: uE    ! Light limited growth rate (1/d)
+  real(rkind), dimension(nospA) :: uSi   ! Silica limited growth rate (1/d)
+  real(rkind), dimension(nospA) :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
+  real(rkind), dimension(nospA) :: Qp    ! Phytoplankton Phosphorus Quota (mmol-P/cell)
+  real(rkind), dimension(nospA) :: f_Qn  ! Quota model for N
+  real(rkind), dimension(nospA) :: f_Qp  ! Quota model for P
+  real(rkind), dimension(nospA) :: vN    ! Phytoplankton uptake rate of Nitrogen (mmol-N/cell/d)
+  real(rkind), dimension(nospA) :: vP    ! Phytoplankton uptake rate of Phosphorus (mmol-P/cell/d)
+  real(rkind), dimension(nospA) :: vSi   ! Phytoplankton uptake rate of Silica (mmol-Si/cell/d)
+  real(rkind)                   :: AupN  ! Total Phytoplankton uptake of Nitrogen (mmol-N/m3/d)
+  real(rkind)                   :: AupP  ! Total Phytoplankton uptake of Phosphorus (mmol-P/m3/d)
+  real(rkind)                   :: AupSi ! Total Phytoplankton uptake of Silica (mmol-Si/m3/d)
 ! Monod equations for phytoplankton
-  real, dimension(nospA) :: monodN  !Monod term in nitrogen uptake
-  real, dimension(nospA) :: monodP  !Monod term in phosphorus uptake
-  real, dimension(nospA) :: monodSi !Monod term in Si uptake
-  real                   :: Ntotal   ! Total N (mmol/m3)
+  real(rkind), dimension(nospA) :: monodN  !Monod term in nitrogen uptake
+  real(rkind), dimension(nospA) :: monodP  !Monod term in phosphorus uptake
+  real(rkind), dimension(nospA) :: monodSi !Monod term in Si uptake
+  real(rkind)                   :: Ntotal   ! Total N (mmol/m3)
 ! Phytoplankton nutrient loss
-  real, dimension(nospA) :: Amort   ! Dead phytoplankton (cells/m3/day)
-  real  :: AexudN  ! Sum of Exudation of N from all phytoplankton groups (mmol-N/m3/d)
-  real  :: AexudP  ! Sum of Exudation of P from all phytoplankton groups (mmol-P/m3/d)
-  real  :: ArespC  ! Phytoplankton equivalent carbon loss from respiration (mmol-C/m3/d)
+  real(rkind), dimension(nospA) :: Amort   ! Dead phytoplankton (cells/m3/day)
+  real(rkind)  :: AexudN  ! Sum of Exudation of N from all phytoplankton groups (mmol-N/m3/d)
+  real(rkind)  :: AexudP  ! Sum of Exudation of P from all phytoplankton groups (mmol-P/m3/d)
+  real(rkind)  :: ArespC  ! Phytoplankton equivalent carbon loss from respiration (mmol-C/m3/d)
 !------------------------------------------------------------------
 ! Zooplankton parameters
 ! Zooplankton uptake and growth
-  real, dimension(nospZ)       :: Z          ! Zooplankton number density (indv./m3)
-  real, dimension(nospZ)       :: Zgrow      ! Zooplankton growth (indv./m3/d)
-  real, dimension(nospA,nospZ) :: Zgrazvol   ! Grazing rate in units of biovolume (um3/m3/d)
-  real, dimension(nospA,nospZ) :: ZgrazA     ! Zooplankton grazing of phytoplankton (cells/m3/d)
-  real, dimension(nospA)       :: ZgrazA_tot ! Total zooplankton grazing of phytoplankton (cells/m3/d)
-  real, dimension(nospZ)       :: ZgrazN     ! Zooplankton grazing uptake of Nitrogen (mmol-N/m3/d)
-  real, dimension(nospZ)       :: ZgrazP     ! Zooplankton grazing uptake of Phosphorus (mmol-P/m3/d)
-  real, dimension(nospZ)       :: ZgrazC     ! Zooplankton grazing uptake of Carbon (mmol-C/m3/d)
-  real, dimension(nospZ)       :: ZinN       ! Zooplankton ingestion of Nitrogen (mmol-N/m3/d)
-  real, dimension(nospZ)       :: ZinP       ! Zooplankton ingestion of Phosphorus (mmol-P/m3/d)
-  real, dimension(nospZ)       :: ZinC       ! Zooplankton ingestion of Carbon (mmol-C/m3/d)
+  real(rkind), dimension(nospZ)       :: Z          ! Zooplankton number density (indv./m3)
+  real(rkind), dimension(nospZ)       :: Zgrow      ! Zooplankton growth (indv./m3/d)
+  real(rkind), dimension(nospA,nospZ) :: Zgrazvol   ! Grazing rate in units of biovolume (um3/m3/d)
+  real(rkind), dimension(nospA,nospZ) :: ZgrazA     ! Zooplankton grazing of phytoplankton (cells/m3/d)
+  real(rkind), dimension(nospA)       :: ZgrazA_tot ! Total zooplankton grazing of phytoplankton (cells/m3/d)
+  real(rkind), dimension(nospZ)       :: ZgrazN     ! Zooplankton grazing uptake of Nitrogen (mmol-N/m3/d)
+  real(rkind), dimension(nospZ)       :: ZgrazP     ! Zooplankton grazing uptake of Phosphorus (mmol-P/m3/d)
+  real(rkind), dimension(nospZ)       :: ZgrazC     ! Zooplankton grazing uptake of Carbon (mmol-C/m3/d)
+  real(rkind), dimension(nospZ)       :: ZinN       ! Zooplankton ingestion of Nitrogen (mmol-N/m3/d)
+  real(rkind), dimension(nospZ)       :: ZinP       ! Zooplankton ingestion of Phosphorus (mmol-P/m3/d)
+  real(rkind), dimension(nospZ)       :: ZinC       ! Zooplankton ingestion of Carbon (mmol-C/m3/d)
 !Monod equations for zooplankton ingestion of phytoplankton
-  real, dimension(nospA,nospZ) :: monodZ     ! Monod term for zooplankton grazing
-  real                         :: Abiovol    ! Algae biovolume vector (um3/m3)
-  real, dimension(nospA,nospZ) :: top_A      ! Monod numerator value for phytoplankton group
-  real, dimension(nospA,nospZ) :: bottom_A   ! Monod Denominator value for phytoplankton group
-  real, dimension(nospZ)       :: bottom     ! Sum of Monod Denominator value for all phytoplankton groups
+  real(rkind), dimension(nospA,nospZ) :: monodZ     ! Monod term for zooplankton grazing
+  real(rkind)                         :: Abiovol    ! Algae biovolume vector (um3/m3)
+  real(rkind), dimension(nospA,nospZ) :: top_A      ! Monod numerator value for phytoplankton group
+  real(rkind), dimension(nospA,nospZ) :: bottom_A   ! Monod Denominator value for phytoplankton group
+  real(rkind), dimension(nospZ)       :: bottom     ! Sum of Monod Denominator value for all phytoplankton groups
 !Zooplankton nutrient loss
-  real, dimension(nospZ)       :: Zresp      ! Zooplankton respiration (individuals/m3/d)
-  real                         :: ZrespC     ! Carbon loss from zooplankton respiration (mmol-C/m3/day)
-  real, dimension(nospZ)       :: ZunC       ! Unassimilated ingested Carbon (mmol-C/m3/d)
-  real, dimension(nospZ)       :: ZunN       ! Unassimilated ingested Nitrogen (mmol-N/m3/d)
-  real, dimension(nospZ)       :: ZunP       ! Unassimilated ingested Phosphorus (mmol-P/m3/d)
-  real, dimension(nospZ)       :: ZunSi      ! Unassimilated ingested Silica (mmol-Si/m3/d)
-  real, dimension(nospZ)       :: Zmort      ! Dead zooplankton (individuals/m3/d)
-  real, dimension(nospZ)       :: ZmortC     ! Carbon released from dead zooplankton (mmol-C/m3/d)
-  real, dimension(nospZ)       :: ZmortN     ! Nitrogen released from dead zooplankton (mmol-N/m3/d)
-  real, dimension(nospZ)       :: ZmortP     ! Phosphorus released from dead zooplankton (mmol-P/m3/d)
-  real, dimension(nospZ)       :: ZslopC     ! Carbon lost to sloppy feeding (mmol-C/m3/d)
-  real, dimension(nospZ)       :: ZslopN     ! Nitrogen lost to sloppy feeding (mmol-N/m3/d)
-  real, dimension(nospZ)       :: ZslopP     ! Phosphorus lost to sloppy feeding (mmol-P/m3/d)
-  real, dimension(nospZ)       :: ZexN       ! Excretion from zooplankton (mmol-N/m3/d)
-  real, dimension(nospZ)       :: ZexP       ! Excretion from zooplankton (mmol-P/m3/d)
-  real, dimension(nospZ)       :: ZegC       ! Egestion from zooplankton (mmol-C/m3/d)
-  real, dimension(nospZ)       :: ZegN       ! Egestion from zooplankton (mmol-N/m3/d)
-  real, dimension(nospZ)       :: ZegP       ! Egestion from zooplankton (mmol-P/m3/d)
-  real, dimension(nospZ)       :: ZegSi      ! Egestion from zooplankton (mmol-Si/m3/d)
-  real          :: OM1_Ratio, OM2_Ratio      ! Separates sloppy feeding into OM1 and OM2
+  real(rkind), dimension(nospZ)       :: Zresp      ! Zooplankton respiration (individuals/m3/d)
+  real(rkind)                         :: ZrespC     ! Carbon loss from zooplankton respiration (mmol-C/m3/day)
+  real(rkind), dimension(nospZ)       :: ZunC       ! Unassimilated ingested Carbon (mmol-C/m3/d)
+  real(rkind), dimension(nospZ)       :: ZunN       ! Unassimilated ingested Nitrogen (mmol-N/m3/d)
+  real(rkind), dimension(nospZ)       :: ZunP       ! Unassimilated ingested Phosphorus (mmol-P/m3/d)
+  real(rkind), dimension(nospZ)       :: ZunSi      ! Unassimilated ingested Silica (mmol-Si/m3/d)
+  real(rkind), dimension(nospZ)       :: Zmort      ! Dead zooplankton (individuals/m3/d)
+  real(rkind), dimension(nospZ)       :: ZmortC     ! Carbon released from dead zooplankton (mmol-C/m3/d)
+  real(rkind), dimension(nospZ)       :: ZmortN     ! Nitrogen released from dead zooplankton (mmol-N/m3/d)
+  real(rkind), dimension(nospZ)       :: ZmortP     ! Phosphorus released from dead zooplankton (mmol-P/m3/d)
+  real(rkind), dimension(nospZ)       :: ZslopC     ! Carbon lost to sloppy feeding (mmol-C/m3/d)
+  real(rkind), dimension(nospZ)       :: ZslopN     ! Nitrogen lost to sloppy feeding (mmol-N/m3/d)
+  real(rkind), dimension(nospZ)       :: ZslopP     ! Phosphorus lost to sloppy feeding (mmol-P/m3/d)
+  real(rkind), dimension(nospZ)       :: ZexN       ! Excretion from zooplankton (mmol-N/m3/d)
+  real(rkind), dimension(nospZ)       :: ZexP       ! Excretion from zooplankton (mmol-P/m3/d)
+  real(rkind), dimension(nospZ)       :: ZegC       ! Egestion from zooplankton (mmol-C/m3/d)
+  real(rkind), dimension(nospZ)       :: ZegN       ! Egestion from zooplankton (mmol-N/m3/d)
+  real(rkind), dimension(nospZ)       :: ZegP       ! Egestion from zooplankton (mmol-P/m3/d)
+  real(rkind), dimension(nospZ)       :: ZegSi      ! Egestion from zooplankton (mmol-Si/m3/d)
+  real(rkind)          :: OM1_Ratio, OM2_Ratio      ! Separates sloppy feeding into OM1 and OM2
 !---------------------------------------------------------------------- 
 ! Time variables  
-  real, parameter :: one_d_365  = 1.0/365.0  ! Convert 1/yr to 1/day
-  real, parameter :: SDay       = 86400.     ! Seconds in 1 day
+  real(rkind), parameter :: one_d_365  = 1.0/365.0  ! Convert 1/yr to 1/day
+  real(rkind), parameter :: SDay       = 86400.0     ! Seconds in 1 day
 !-----------------------------------------------------------------------
 ! Organic Matter Calculations
 ! Variables to calculate stoichiometry C:N:P ratios
-  real             :: OM1_CA, OM1_NA, OM1_PA ! OM from dead phytoplankton
-  real             :: OM2_CA, OM2_NA, OM2_PA   
-  real             :: OM1_CZ, OM1_NZ, OM1_PZ ! OM from zooplankton
-  real             :: OM2_CZ, OM2_NZ, OM2_PZ
-  real             :: sx1,sy1,sx2,sy2        ! x=C/P, y=N/P 
-  real, parameter  :: sz = 1.                ! z=P/P = 1
+  real(rkind)             :: OM1_CA, OM1_NA, OM1_PA ! OM from dead phytoplankton
+  real(rkind)             :: OM2_CA, OM2_NA, OM2_PA   
+  real(rkind)             :: OM1_CZ, OM1_NZ, OM1_PZ ! OM from zooplankton
+  real(rkind)             :: OM2_CZ, OM2_NZ, OM2_PZ
+  real(rkind)             :: sx1,sy1,sx2,sy2        ! x=C/P, y=N/P 
+  real(rkind), parameter  :: sz = 1.0                ! z=P/P = 1
 !---------------------------------------------------------------------------
 ! reaction and Nitrification subroutine variables
-  real    :: R_11                            ! Nitrification term
-  real    :: RNO3_A, RNO3_Z, RNO3_R, RNO3_BC ! Remineralization terms for NO3
-  real    :: RNH4_A, RNH4_Z, RNH4_R, RNH4_BC ! Remineralization terms for NH4
-  real    :: ROM1CA, ROM1CZ, ROM1_R, ROM1_BC ! Remineralization terms for POC
-  real    :: ROM2CA, ROM2CZ, ROM2_R, ROM2_BC ! Remineralization terms for DOC
-  real    :: ROM1NA, ROM1PA, ROM1NZ, ROM1PZ  !
-  real    :: ROM2NA, ROM2PA, ROM2NZ, ROM2PZ  !
-  real    :: RO2_A, RO2_Z, RO2_R, RO2_BC     ! Remineralization terms for O2
-  real    :: RPO4_A, RPO4_Z, RPO4_R, RPO4_BC ! Remineralization terms for PO4
-  real    :: RDIC_A, RDIC_Z, RDIC_R, RDIC_BC ! Remineralization terms for DIC
-  real    :: RSi_A, RSi_Z, RSi_R, RSi_BC     ! Remineralization terms for Si
-  real    :: RALK_A, RALK_Z, RALK_R, RALK_BC ! Remineralization terms for ALK
-  real    :: RN2_A, RN2_Z, RN2_R, RN2_BC     ! Remineralization terms for N2 
-  real, dimension(10) :: RC   ! Array that returns remineralization terms for OM
-  real    :: RNO3,RNH4,RO2,RPO4,RDIC,RSi,RALK,RN2 ! Totals
+  real(rkind)    :: R_11                            ! Nitrification term
+  real(rkind)    :: RNO3_A, RNO3_Z, RNO3_R, RNO3_BC ! Remineralization terms for NO3
+  real(rkind)    :: RNH4_A, RNH4_Z, RNH4_R, RNH4_BC ! Remineralization terms for NH4
+  real(rkind)    :: ROM1CA, ROM1CZ, ROM1_R, ROM1_BC ! Remineralization terms for POC
+  real(rkind)    :: ROM2CA, ROM2CZ, ROM2_R, ROM2_BC ! Remineralization terms for DOC
+  real(rkind)    :: ROM1NA, ROM1PA, ROM1NZ, ROM1PZ  !
+  real(rkind)    :: ROM2NA, ROM2PA, ROM2NZ, ROM2PZ  !
+  real(rkind)    :: RO2_A, RO2_Z, RO2_R, RO2_BC     ! Remineralization terms for O2
+  real(rkind)    :: RPO4_A, RPO4_Z, RPO4_R, RPO4_BC ! Remineralization terms for PO4
+  real(rkind)    :: RDIC_A, RDIC_Z, RDIC_R, RDIC_BC ! Remineralization terms for DIC
+  real(rkind)    :: RSi_A, RSi_Z, RSi_R, RSi_BC     ! Remineralization terms for Si
+  real(rkind)    :: RALK_A, RALK_Z, RALK_R, RALK_BC ! Remineralization terms for ALK
+  real(rkind)    :: RN2_A, RN2_Z, RN2_R, RN2_BC     ! Remineralization terms for N2 
+  real(rkind), dimension(10) :: RC   ! Array that returns remineralization terms for OM
+  real(rkind)    :: RNO3,RNH4,RO2,RPO4,RDIC,RSi,RALK,RN2 ! Totals
 !---------------------------------------------------------
-  real    :: OM1R,OM2R,OM1BC,OM2BC
-  real    :: CDOM,NO3,NH4,DIC,O2,PO4,Si,ALK
-  real    :: OM1CA,OM1NA,OM1PA,OM1CZ,OM1NZ,OM1PZ
-  real    :: OM2CA,OM2NA,OM2PA,OM2CZ,OM2NZ,OM2PZ
-  real    :: pH
+  real(rkind)    :: OM1R,OM2R,OM1BC,OM2BC
+  real(rkind)    :: CDOM,NO3,NH4,DIC,O2,PO4,Si,ALK
+  real(rkind)    :: OM1CA,OM1NA,OM1PA,OM1CZ,OM1NZ,OM1PZ
+  real(rkind)    :: OM2CA,OM2NA,OM2PA,OM2CZ,OM2NZ,OM2PZ
+!  real(rkind)    :: pH
 !-----------------------------------------------------------------------
 ! Other variables 
-  real            :: PrimProd                ! Primary production (photosynthesis)
-  real, dimension(nospA+nospZ) :: Tadj       ! Temperature adjustment factor
+  real(rkind)            :: PrimProd                ! Primary production (photosynthesis)
+  real(rkind), dimension(nospA+nospZ) :: Tadj       ! Temperature adjustment factor
 !------------------------------------------------------------------    
 !timestep in days
-  real :: dTd
+  real(rkind) :: dTd
 !------------------------------------------------------------------
 !Output vars for alkalinity subroutine:
-  real :: ph_calc(1), pco2_calc(1), fco2(1), co2(1), hco3(1), co3(1), omegaa(1), omegac(1), betad_calc(1) 
-  real :: rhosw(1), p(1), tempis(1)
-  real :: patm(1) = 1.
-  real :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
-  real :: m_lat(1),m_T(1),m_S(1),m_d_sfc(1)
+  real(rkind) :: ph_calc(1), pco2_calc(1), fco2(1), co2(1), hco3(1), co3(1), omegaa(1), omegac(1), betad_calc(1) 
+  real(rkind) :: rhosw(1), p(1), tempis(1)
+  real(rkind) :: patm(1) = 1.
+  real(rkind) :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
+  real(rkind) :: m_lat(1),m_T(1),m_S(1),m_d_sfc(1)
 !mocsy needs lat to be an array
   m_lat = lat
   m_T = T
@@ -193,7 +197,7 @@
   !- ZgrazA_tot: total zooplankton grazing on Ai by all zooplankton groups (cells/m3/d)
   do isp = 1, nospA
      Abiovol         = A(isp)*volcell(isp) 
-     top_A(isp,:)    = AMAX1((Abiovol-Athresh(isp))*ediblevector(:,isp),0.0)
+     top_A(isp,:)    = DMAX1((Abiovol-Athresh(isp))*ediblevector(:,isp),0.0)
      bottom_A(isp,:) = Abiovol * ediblevector(:,isp)
   enddo
  
@@ -302,12 +306,12 @@
   !! Enforce minima for Droop, also enforce maxima if not equal Droop (which_quota=1)
   if(which_quota.eq.1) then
     do isp=1,nospA
-       ff_new(iQn(isp)) = AMAX1(Qn(isp) + (vN(isp) - Qn(isp)*uA(isp))*dTd,QminN(isp))
+       ff_new(iQn(isp)) = DMAX1(Qn(isp) + (vN(isp) - Qn(isp)*uA(isp))*dTd,QminN(isp))
     enddo
   !! , also enforce maxima if not equal Droop (which_quota=1)
   else
     do isp=1,nospA
-        ff_new(iQn(isp)) = AMIN1(AMAX1(Qn(isp) + (vN(isp) - Qn(isp)*uA(isp))*dTd,QminN(isp)),QmaxN(isp))
+        ff_new(iQn(isp)) = DMIN1(DMAX1(Qn(isp) + (vN(isp) - Qn(isp)*uA(isp))*dTd,QminN(isp)),QmaxN(isp))
     enddo
   endif
 
@@ -317,12 +321,12 @@
   !! Enforce minima for Droop, also enforce maxima if not equal Droop (which_quota=1)
   if(which_quota.eq.1) then
     do isp=1,nospA
-        ff_new(iQp(isp)) = AMAX1(Qp(isp) + (vP(isp) - Qp(isp)*uA(isp))*dTd,QminP(isp))
+        ff_new(iQp(isp)) = DMAX1(Qp(isp) + (vP(isp) - Qp(isp)*uA(isp))*dTd,QminP(isp))
     enddo
   !! , also enforce maxima if not equal Droop (which_quota=1)
   else
     do isp=1,nospA
-        ff_new(iQp(isp)) = AMIN1(AMAX1(Qp(isp) + (vP(isp) - Qp(isp)*uA(isp))*dTd,QminP(isp)),QmaxP(isp))
+        ff_new(iQp(isp)) = DMIN1(DMAX1(Qp(isp) + (vP(isp) - Qp(isp)*uA(isp))*dTd,QminP(isp)),QmaxP(isp))
     enddo
   endif
   !----------------------------------------------------------------------- 
@@ -370,8 +374,8 @@
   !-----------------------------------------------------
   ! ZegC should not be negative 
   do isz=1,nospZ
-      if(ZegC(isz).lt.0.) then
-          ZegC(isz) = 0.
+      if(ZegC(isz).lt.0.0) then
+          ZegC(isz) = 0.0
           !ZegN(isz) = 0.
           !ZegP(isz) = 0.
           write(6,*) "ZegC,ZegN,ZegP",ZegC(isz),ZegN(isz),ZegP(isz)
@@ -396,7 +400,7 @@
   !---------------------------------------------------------
   !-Z; Zooplankton number density (individuals/m3);
   !---------------------------------------------------------
-  ff_new(iZ(:))  = AMAX1( Z(:)                         &
+  ff_new(iZ(:))  = DMAX1( Z(:)                         &
   &      + (Zgrow(:) - Zresp(:) - Zmort(:))*dTd, 1.)
 
   !-----------------------------------------------------------
@@ -416,14 +420,14 @@
   ! Carbon Chemistry
   !--------------------------------------------------------------
   !!! MOCSY alkalinity expressions:
-  m_alk = ALK/1000.
-  m_dic = DIC/1000.
-  m_si  = Si/1000.
-  m_po4 = PO4/1000.
-  call vars(ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
-  &    m_T, m_S, m_alk, m_dic, m_si, m_po4, patm, m_d_sfc, m_lat, 1, &
-  &    'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
-  pH = ph_calc(1)
+  m_alk = ALK/1000.0
+  m_dic = DIC/1000.0
+  m_si  = Si/1000.0
+  m_po4 = PO4/1000.0
+!  call vars(ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
+!  &    m_T, m_S, m_alk, m_dic, m_si, m_po4, patm, m_d_sfc, m_lat, 1, &
+!  &    'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
+!  pH = ph_calc(1)
 
   !------------------------------------------------------------
   ! Particulate and Dissolved dead phytoplankton, rate of remineralization
@@ -525,12 +529,12 @@
   ! Stoichiometry - calculate C:N:P ratios for Remineralization equations
   !---------------------------------------------------------------------
   !-- Organic Matter from dead phytoplankton --------------------------
-  OM1_CA = 0.
-  OM2_CA = 0.
-  OM1_NA = 0.
-  OM2_NA = 0.
-  OM1_PA = 0.
-  OM2_PA = 0.
+  OM1_CA = 0.0
+  OM2_CA = 0.0
+  OM1_NA = 0.0
+  OM2_NA = 0.0
+  OM1_PA = 0.0
+  OM2_PA = 0.0
 
   do isp=1,nospA
    !If Nitrogen limited
@@ -654,6 +658,12 @@
   & (RALK + AupN*NO3/(Ntotal)            &
   &          - AupN*NH4/(Ntotal)         &
   &          + AupP + 4.8*AupP)*dTd
+
+
+  ! Before transport, Combine A/Q's
+  ff_new(iQn(:)) = ff_new(iQn(:)) * ff_new(iA(:))
+  ff_new(iQp(:)) = ff_new(iQp(:)) * ff_new(iA(:))
+
 
   return
   end subroutine cgem_step

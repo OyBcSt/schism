@@ -7378,9 +7378,9 @@
         endif !heat exchange
 
 #ifdef USE_GEN
-!        if(myrank==0) write(16,*) "Before Run CGEM"
-!        if(myrank==0) write(16,*) 'Entering cgem model...'
-!        if(myrank==0) write(16,*) 'ntrs(3)=',ntrs(3)
+        if(myrank==0) write(16,*) "Before Run CGEM"
+        if(myrank==0) write(16,*) 'Entering cgem model...'
+        if(myrank==0) write(16,*) 'ntrs(3)=',ntrs(3)
         call cgem_run(it,myrank)
 #endif /*USE_GEN*/
 

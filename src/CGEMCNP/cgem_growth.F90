@@ -4,6 +4,7 @@ use cgem, only: nospA,nospZ,writecsv,umax,QminN,QmaxN,QminP,QmaxP,nfQs,   &
   & respg,respb,alphad,betad,Tref,KTg1,KTg2,Ea,KQn,KQp,KSi,Qc, &
   & which_growth,which_photosynthesis,which_quota,which_temperature,     &
   & which_uptake,CChla
+use schism_glbl, only : rkind
 
 implicit none
 
@@ -17,32 +18,32 @@ subroutine calc_Agrow( E, T, Qn, Qp, Si, A, Agrow, &
 ! growth model to calculate the 1D array (water column) Agrow 
 !-----------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ---------------------
-  real,intent(in)  ::  E           ! Irradiance (quanta/cm2/sec) 
+  real(rkind),intent(in)  ::  E           ! Irradiance (quanta/cm2/sec) 
                                        !   at middle of layer k
-  real,intent(in)  ::  T         ! Water temperature in Celsius
-  real,intent(in)  ::  Qn(nospA)    ! Phytoplankton Nitrogen Quota (mmol-N/cell)         
-  real,intent(in)  ::  Qp(nospA)    ! Phytoplankton Phosphorous Quota (mmol-P/cell)     
-  real,intent(in)  ::  Si          ! Silica (mmol-Si/m3)
-  real,intent(in)  ::  A(nospA)   ! Number density of phytoplankton group isp 
+  real(rkind),intent(in)  ::  T         ! Water temperature in Celsius
+  real(rkind),intent(in)  ::  Qn(nospA)    ! Phytoplankton Nitrogen Quota (mmol-N/cell)         
+  real(rkind),intent(in)  ::  Qp(nospA)    ! Phytoplankton Phosphorous Quota (mmol-P/cell)     
+  real(rkind),intent(in)  ::  Si          ! Silica (mmol-Si/m3)
+  real(rkind),intent(in)  ::  A(nospA)   ! Number density of phytoplankton group isp 
 ! -- Declare calculated variables being returned ---------------------
-  real,intent(out) ::  Agrow(nospA)  ! Specific growth rate    
+  real(rkind),intent(out) ::  Agrow(nospA)  ! Specific growth rate    
                                           !   of phytoplankton group isp
-  real,intent(out) ::  uA(nospA)     ! Temperature adjusted light factor
+  real(rkind),intent(out) ::  uA(nospA)     ! Temperature adjusted light factor
                                           !   phytoplankton group isp
-  real,intent(out) ::  Aresp(nospA)  ! Phytoplankton respiration of group       	
+  real(rkind),intent(out) ::  Aresp(nospA)  ! Phytoplankton respiration of group       	
                                           !   isp, including dark respiration. 
-  real,intent(out) ::  uN(nospA)     ! Nitrogen limited growth rate (1/d)
-  real,intent(out) ::  uP(nospA)     ! Phosphorus limited growth rate (1/d)
-  real,intent(out) ::  uE(nospA)     ! Light limited growth rate (1/d)
-  real,intent(out) ::  uSi(nospA)    ! Silica limited growth rate (1/d)
+  real(rkind),intent(out) ::  uN(nospA)     ! Nitrogen limited growth rate (1/d)
+  real(rkind),intent(out) ::  uP(nospA)     ! Phosphorus limited growth rate (1/d)
+  real(rkind),intent(out) ::  uE(nospA)     ! Light limited growth rate (1/d)
+  real(rkind),intent(out) ::  uSi(nospA)    ! Silica limited growth rate (1/d)
 
 ! -- Local variables --------------------------------------------------------------   
   integer :: isp ! loop indices     
-  real,dimension(nospA+nospZ) :: Tadj            ! Temperature adjustment factor, variable and function 
-  real,dimension(nospA)       :: f_E             ! Light growth function 
-  real,dimension(nospA)       :: f_N, f_P, f_Si  ! Nutrient growth functions
-  real,dimension(nospA)       :: min_S           ! Limiting substrate values
-  real,dimension(nospA)       :: respg2          ! Actual respiration coefficient
+  real(rkind),dimension(nospA+nospZ) :: Tadj            ! Temperature adjustment factor, variable and function 
+  real(rkind),dimension(nospA)       :: f_E             ! Light growth function 
+  real(rkind),dimension(nospA)       :: f_N, f_P, f_Si  ! Nutrient growth functions
+  real(rkind),dimension(nospA)       :: min_S           ! Limiting substrate values
+  real(rkind),dimension(nospA)       :: respg2          ! Actual respiration coefficient
 !------------------------------------------------------------------------
 !-------------------------------
 ! Begin growth rate calculations
@@ -50,7 +51,7 @@ subroutine calc_Agrow( E, T, Qn, Qp, Si, A, Agrow, &
     call func_S( Qn, Qp, Si, f_N, f_P, f_Si ) ! Nutrient dependent growth function
     call func_T( T, Tadj ) ! Temperature adjustment
     do isp = 1, nospA
-       min_S(isp) = AMIN1( f_N(isp), f_P(isp), f_Si(isp) )
+       min_S(isp) = DMIN1( f_N(isp), f_P(isp), f_Si(isp) )
     enddo
     call func_E( E, min_S, f_E ) ! Light growth function
 
@@ -64,7 +65,7 @@ subroutine calc_Agrow( E, T, Qn, Qp, Si, A, Agrow, &
 
     if(which_growth.eq.1) then
       do isp=1,nospA
-        uA(isp) = umax(isp) * Tadj(isp) * AMIN1(min_S(isp),f_E(isp)) ! Minimum Formulation
+        uA(isp) = umax(isp) * Tadj(isp) * DMIN1(min_S(isp),f_E(isp)) ! Minimum Formulation
       enddo
     else if(which_growth.eq.2) then
       do isp=1,nospA
@@ -76,7 +77,7 @@ subroutine calc_Agrow( E, T, Qn, Qp, Si, A, Agrow, &
       enddo
     else !Let default be Minimum Formulation
       do isp=1,nospA
-        uA(isp) = umax(isp) * Tadj(isp) * AMIN1(min_S(isp),f_E(isp)) ! Minimum Formulation
+        uA(isp) = umax(isp) * Tadj(isp) * DMIN1(min_S(isp),f_E(isp)) ! Minimum Formulation
       enddo
     endif
 
@@ -126,10 +127,10 @@ subroutine func_E( E, min_S, f_E )
 !   betad  =
 !------------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ---------------------
-  real, intent(in) :: E    ! Irradiance (quanta/cm**2/sec)
-  real, dimension(nospA), intent(in) :: min_S ! Function of rate limiting nutrient
+  real(rkind), intent(in) :: E    ! Irradiance (quanta/cm**2/sec)
+  real(rkind), dimension(nospA), intent(in) :: min_S ! Function of rate limiting nutrient
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out),dimension(nospA)  :: f_E   ! Growth rate factor (dimensionless) 
+  real(rkind), intent(out),dimension(nospA)  :: f_E   ! Growth rate factor (dimensionless) 
   integer isp
 
   if (which_photosynthesis.eq.1) then         !With photoinhibition 
@@ -174,11 +175,11 @@ subroutine func_Qs( Qn, Qp, f_Qn, f_Qp)
 !   Qmin/max_X - minimum and maximum nutrient cell quota (mmol/cell)
 !------------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ---------------------
-  real, intent(in), dimension(nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
-  real, intent(in), dimension(nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
+  real(rkind), intent(in), dimension(nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
+  real(rkind), intent(in), dimension(nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out), dimension(nospA) :: f_Qn  ! Function based on N
-  real, intent(out), dimension(nospA) :: f_Qp  ! Function based on P
+  real(rkind), intent(out), dimension(nospA) :: f_Qn  ! Function based on N
+  real(rkind), intent(out), dimension(nospA) :: f_Qp  ! Function based on P
   integer isp
 
   if (which_uptake.eq.1) then !Michaelis-Menten
@@ -227,13 +228,13 @@ subroutine func_S( Qn, Qp, Si, f_N, f_P, f_Si)
 !------------------------------------------------------------------------
 
 ! -- Declare input variables coming thru the interface ---------------------
-  real, intent(in), dimension(nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
-  real, intent(in), dimension(nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
-  real, intent(in)                       :: Si    ! Silica concentration in seawater (mmol-Si/m3)
+  real(rkind), intent(in), dimension(nospA)  :: Qn    ! Phytoplankton Nitrogen Quota (mmol-N/cell)
+  real(rkind), intent(in), dimension(nospA)  :: Qp    ! Phytoplankton Phosporus Quota (mmol-P/cell) 
+  real(rkind), intent(in)                       :: Si    ! Silica concentration in seawater (mmol-Si/m3)
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out), dimension(nospA) :: f_N   ! Function based on N
-  real, intent(out), dimension(nospA) :: f_P   ! Function based on P
-  real, intent(out), dimension(nospA) :: f_Si  ! Function based on Si
+  real(rkind), intent(out), dimension(nospA) :: f_N   ! Function based on N
+  real(rkind), intent(out), dimension(nospA) :: f_P   ! Function based on P
+  real(rkind), intent(out), dimension(nospA) :: f_Si  ! Function based on Si
 ! -- local
   integer :: isp
 
@@ -282,17 +283,17 @@ subroutine func_T( T, Tadj )
 ! nospA,nospZ,Tref,KTg1,KTg2,which_temperature,Ea
 !------------------------------------------------------------------------
 ! -- Declare input variables coming thru the interface ------------------
-  real, intent(in) :: T    ! Temperature (deg C)
+  real(rkind), intent(in) :: T    ! Temperature (deg C)
 ! -- Declare calculated variables being returned ---------------------
-  real, intent(out), dimension(nospA+nospZ) :: Tadj
+  real(rkind), intent(out), dimension(nospA+nospZ) :: Tadj
 ! -- Local variables ------------------------------------------------------
-  real, parameter  :: f0    = 0.1
-  real, parameter  :: r     = 0.3
-  real, parameter  :: f1    = 1.0/f0 - 1.0
-  real, parameter  :: r1    = r*(46.5/18.0)
-  real, parameter  :: k_b    = 8.6173303e-5 !Boltzmann constant in eV/K
-  real, dimension(nospA+nospZ)           :: denom
-  real, dimension(nospA+nospZ)              :: Tref_in_K
+  real(rkind), parameter  :: f0    = 0.1
+  real(rkind), parameter  :: r     = 0.3
+  real(rkind), parameter  :: f1    = 1.0/f0 - 1.0
+  real(rkind), parameter  :: r1    = r*(46.5/18.0)
+  real(rkind), parameter  :: k_b    = 8.6173303e-5 !Boltzmann constant in eV/K
+  real(rkind), dimension(nospA+nospZ)           :: denom
+  real(rkind), dimension(nospA+nospZ)              :: Tref_in_K
   integer          :: isp
 
 #ifdef DEBUG

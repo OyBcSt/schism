@@ -2,13 +2,14 @@ module cgem
 
 !CGEM STATE VARIABLES
 use, intrinsic :: iso_fortran_env, only: stderr => error_unit
+use schism_glbl, only : rkind
 
 implicit none
 
 save
 
 !Write or not
-logical sinkwcgem
+logical sinkwcgem,adjust_ws
 
 !number of species
 integer :: nospA
@@ -16,16 +17,17 @@ integer :: nospZ
 
 !misc
 integer :: skipcgem,checkwindrad,writecsv,debug
-real :: eps
+real(rkind) :: eps
+real(rkind) :: adjust_fac,h_massconsv
 
 !Sinking
-real, dimension(:), allocatable :: ws
-real, dimension(:), allocatable :: fmin
-real :: x !for tiny
+real(rkind), dimension(:), allocatable :: ws
+real(rkind), dimension(:), allocatable :: fmin
+real(rkind) :: x !for tiny
 
 !Fixed Stoichiometry:
-real :: sx1R,sy1R,sx2R,sy2R
-real :: sx1BC,sy1BC,sx2BC,sy2BC
+real(rkind) :: sx1R,sy1R,sx2R,sy2R
+real(rkind) :: sx1BC,sy1BC,sx2BC,sy2BC
 
 !Module Which_Flux
 ! =========================================================
@@ -190,9 +192,6 @@ integer, parameter :: iSDM     = 8 !Sediment Diagenesis Model
 !Total number of state variables
       integer :: nf
 
-!State Variable Array
-      real,allocatable :: ff(:)   !state variable array
-      real, allocatable :: ff_new(:) !differentials array
 
 !----INPUT_VARS_CGEM
 !--Switches in GEM---------
@@ -206,95 +205,95 @@ integer Which_temperature
 integer Which_wind
 integer Which_rad
 !--Temperature
-real, allocatable :: KTg1(:)
-real, allocatable :: KTg2(:)
-real, allocatable :: Tref(:)
-real, allocatable :: Ea(:)
+real(rkind), allocatable :: KTg1(:)
+real(rkind), allocatable :: KTg2(:)
+real(rkind), allocatable :: Tref(:)
+real(rkind), allocatable :: Ea(:)
 !--Optics-----------------------
-real Kw
-real Kcdom
-real Kspm
-real Kchla
+real(rkind) Kw
+real(rkind) Kcdom
+real(rkind) Kspm
+real(rkind) Kchla
 !--in module LIGHT_VARS
-real astar490
-real aw490
-real astarOMA
-real astarOMZ
-real astarOMR
-real astarOMBC
-real PARfac
-real sinkCDOM
+real(rkind) astar490
+real(rkind) aw490
+real(rkind) astarOMA
+real(rkind) astarOMZ
+real(rkind) astarOMR
+real(rkind) astarOMBC
+real(rkind) PARfac
+real(rkind) sinkCDOM
 !---Phytoplankton 
-real, allocatable :: ediblevector(:,:)
-real, allocatable :: umax(:)
-real, allocatable :: CChla(:)
-real, allocatable :: alpha(:)
-real, allocatable :: beta(:)
-real, allocatable :: respg(:)
-real, allocatable :: respb(:)
-real, allocatable :: QminN(:)
-real, allocatable :: QminP(:)
-real, allocatable :: QmaxN(:)
-real, allocatable :: QmaxP(:)
-real, allocatable :: Kn(:)
-real, allocatable :: Kp(:)
-real, allocatable :: Ksi(:)
-real, allocatable :: KQn(:)
-real, allocatable :: KQp(:)
-real, allocatable :: nfQs(:)
-real, allocatable :: vmaxN(:)
-real, allocatable :: vmaxP(:)
-real, allocatable :: vmaxSi(:)
-real, allocatable :: aN(:)
-real, allocatable :: volcell(:)
-real, allocatable :: Qc(:)
-real, allocatable :: Athresh(:)
-real, allocatable :: mA(:)
-real, allocatable :: A_wt(:)
+real(rkind), allocatable :: ediblevector(:,:)
+real(rkind), allocatable :: umax(:)
+real(rkind), allocatable :: CChla(:)
+real(rkind), allocatable :: alpha(:)
+real(rkind), allocatable :: beta(:)
+real(rkind), allocatable :: respg(:)
+real(rkind), allocatable :: respb(:)
+real(rkind), allocatable :: QminN(:)
+real(rkind), allocatable :: QminP(:)
+real(rkind), allocatable :: QmaxN(:)
+real(rkind), allocatable :: QmaxP(:)
+real(rkind), allocatable :: Kn(:)
+real(rkind), allocatable :: Kp(:)
+real(rkind), allocatable :: Ksi(:)
+real(rkind), allocatable :: KQn(:)
+real(rkind), allocatable :: KQp(:)
+real(rkind), allocatable :: nfQs(:)
+real(rkind), allocatable :: vmaxN(:)
+real(rkind), allocatable :: vmaxP(:)
+real(rkind), allocatable :: vmaxSi(:)
+real(rkind), allocatable :: aN(:)
+real(rkind), allocatable :: volcell(:)
+real(rkind), allocatable :: Qc(:)
+real(rkind), allocatable :: Athresh(:)
+real(rkind), allocatable :: mA(:)
+real(rkind), allocatable :: A_wt(:)
 !---Zooplankton
-real, allocatable :: Zeffic(:)
-real, allocatable :: Zslop(:)
-real, allocatable :: Zvolcell(:)
-real, allocatable :: ZQc(:)
-real, allocatable :: ZQn(:)
-real, allocatable :: ZQp(:)
-real, allocatable :: optNP(:)
-real, allocatable :: ZKa(:)
-real, allocatable :: Zrespg(:)
-real, allocatable :: Zrespb(:)
-real, allocatable :: Zumax(:)
-real, allocatable :: Zm(:)
+real(rkind), allocatable :: Zeffic(:)
+real(rkind), allocatable :: Zslop(:)
+real(rkind), allocatable :: Zvolcell(:)
+real(rkind), allocatable :: ZQc(:)
+real(rkind), allocatable :: ZQn(:)
+real(rkind), allocatable :: ZQp(:)
+real(rkind), allocatable :: optNP(:)
+real(rkind), allocatable :: ZKa(:)
+real(rkind), allocatable :: Zrespg(:)
+real(rkind), allocatable :: Zrespb(:)
+real(rkind), allocatable :: Zumax(:)
+real(rkind), allocatable :: Zm(:)
 
 !---Organic Matter              
-real KG1
-real KG2
-real KG1R
-real KG2R
-real KG1BC
-real KG2BC
-real KNH4
-real nitmax
-real KO2
-real KstarO2
-real KNO3
-real pCO2
-real KGcdom
-real CF_SPM
+real(rkind) KG1
+real(rkind) KG2
+real(rkind) KG1R
+real(rkind) KG2R
+real(rkind) KG1BC
+real(rkind) KG2BC
+real(rkind) KNH4
+real(rkind) nitmax
+real(rkind) KO2
+real(rkind) KstarO2
+real(rkind) KNO3
+real(rkind) pCO2
+real(rkind) KGcdom
+real(rkind) CF_SPM
 !----Other including Boundary Conditions------------
-real KH_coeff
+real(rkind) KH_coeff
 integer Which_Outer_BC
-real wt_l, wt_o
-real wt_pl, wt_po
-real m_OM_init,m_OM_BC,m_OM_sh
-real KGbot
+real(rkind) wt_l, wt_o
+real(rkind) wt_pl, wt_po
+real(rkind) m_OM_init,m_OM_BC,m_OM_sh
+real(rkind) KGbot
 
 !Light curve parameters
-real, allocatable :: alphad(:) ! Initial slope of photosynthesis-irradiance curve / Vmax
-real, allocatable :: betad(:)  ! Photoinhibition constant / Vmax
+real(rkind), allocatable :: alphad(:) ! Initial slope of photosynthesis-irradiance curve / Vmax
+real(rkind), allocatable :: betad(:)  ! Photoinhibition constant / Vmax
 
 !Initialize variables in cgem_init from cgem_read
-  real, dimension(:), allocatable, private :: sinkA
-  real, private :: sinkOM1A,sinkOM2A,sinkOM1Z,sinkOM2Z,sinkOM1R,sinkOM2R,sinkOM1BC,sinkOM2BC
+  real(rkind), dimension(:), allocatable, private :: sinkA
+  real(rkind), private :: sinkOM1A,sinkOM2A,sinkOM1Z,sinkOM2Z,sinkOM1R,sinkOM2R,sinkOM1BC,sinkOM2BC
 
 contains
 
@@ -303,7 +302,7 @@ subroutine cgem_dim
   integer           :: istat,iunit
   character(len=1000) :: line
   !http://degenerateconic.com/namelist-error-checking.html
-  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug,sinkwcgem
+  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug,sinkwcgem,adjust_ws,adjust_fac,h_massconsv
 
 #ifdef DEBUG
 write(6,*) "Begin cgem_dim"
@@ -563,15 +562,6 @@ write(6,*) "Begin cgem_allocate"
 !How many state variables
       nf = iALK
 
-      allocate(ff(nf),stat=ierr)
-      if(ierr.ne.0) write(6,*) "error in allocating:ff"
-
-      allocate(ff_new(nf),stat=ierr)
-      if(ierr.ne.0) write(6,*) "error in allocating:dff"
-
-      ff  = -9999. 
-      ff_new = -9999.
-
 !----allocate INPUT_VARS_CGEM
 
 !---Phytoplankton 
@@ -692,7 +682,7 @@ end subroutine cgem_allocate
 subroutine cgem_init
 
 integer :: isp
-real tot
+real(rkind) tot
 
 #ifdef DEBUG
 write(6,*) "Begin cgem_init"

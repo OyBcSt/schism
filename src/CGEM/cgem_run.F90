@@ -122,6 +122,7 @@ else
   !Call CGEM for a column
   !Input is ff, output is ff_new
   call cgem_step(TC_8,dt,istep,i,myrank)
+  im = km
   do k=kbe(i)+1,nvrt
      ff_new(:,mm)=ff(:,mm)
      im = im-1

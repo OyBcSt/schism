@@ -1,5 +1,5 @@
     module cgem_utils 
-
+    use schism_glbl, only : rkind
     implicit none
 
     private :: rnitrate
@@ -18,33 +18,33 @@
   !------------------------------------------------------------
     IMPLICIT NONE
 
-    REAL,  INTENT(IN) :: S  ! Salinity
-    REAL,  INTENT(IN) :: T  ! Water Temperature(deg C)
+    REAL(RKIND),  INTENT(IN) :: S  ! Salinity
+    REAL(RKIND),  INTENT(IN) :: T  ! Water Temperature(deg C)
 
 !-----------------------------------------------------------
 
-    REAL, DIMENSION(8), PARAMETER :: A0 = (/&
+    REAL(RKIND), DIMENSION(8), PARAMETER :: A0 = (/&
     & 290.9097, 207.6548, 148.0248, 0.0221, &
     & 0.5709  , 0.9805  , 1.4853  , 0.5998 /)
 
-    REAL, DIMENSION(8), PARAMETER :: A1 = (/&
+    REAL(RKIND), DIMENSION(8), PARAMETER :: A1 = (/&
     & 14554.21, 11843.79, 8966.9 , 34.02,   &
     & -84.25  , -92.65  , -192.69, -75.25  /)
 
-    REAL, DIMENSION(8), PARAMETER :: A2 =   &
+    REAL(RKIND), DIMENSION(8), PARAMETER :: A2 =   &
     &  (/ 45.0575, 33.6485, 24.4344, 0.0,   &
     &     0.0    , 0.0    , 0.0    , 0.0   /)
 
-    REAL,DIMENSION(8),PARAMETER ::  B0 =    &
+    REAL(RKIND),DIMENSION(8),PARAMETER ::  B0 =    &
     & (/ 0.0   , 0.0   , 0.0   , 0.0   ,    &
     &   -1.632 , -3.294, -5.058, -1.767    /)
 
-    REAL, DIMENSION(9) :: RK
+    REAL(RKIND), DIMENSION(9) :: RK
 
-    REAL    :: SP
-    REAL    :: TP
-    REAL    :: TP_OVER_100
-    REAL    :: RK1S
+    REAL(RKIND)    :: SP
+    REAL(RKIND)    :: TP
+    REAL(RKIND)    :: TP_OVER_100
+    REAL(RKIND)    :: RK1S
     INTEGER :: I
     INTEGER :: J
 !-----------------------------------------------------------
@@ -94,27 +94,27 @@
 !--------------------------------------------------------------------
     IMPLICIT NONE
 
-    REAL, INTENT(IN)    :: S     ! Salinity 
-    REAL, INTENT(IN)    :: TC    ! TC       - Dissolved Inorganic Carbon (DIC) (mmol m-3) in upper
+    REAL(RKIND), INTENT(IN)    :: S     ! Salinity 
+    REAL(RKIND), INTENT(IN)    :: TC    ! TC       - Dissolved Inorganic Carbon (DIC) (mmol m-3) in upper
                                  !            model layer
-    REAL, INTENT(IN)    :: T     ! Temperature (Celsius)
-    REAL, INTENT(IN)    :: PH    ! dimensionless
+    REAL(RKIND), INTENT(IN)    :: T     ! Temperature (Celsius)
+    REAL(RKIND), INTENT(IN)    :: PH    ! dimensionless
 !-----------------------------------------------
-    REAL                :: RK0        = 0.0
-    REAL                :: RK1        = 0.0
-    REAL                :: RK2        = 0.0
-    REAL                :: RK1RK2     = 0.0
-    REAL                :: H1         = 0.0
-    REAL                :: H1_SQUARED = 0.0
-    REAL                :: ALPHE0     = 0.0
-    REAL                :: ALPHE1     = 0.0
-    REAL                :: ALPHE2     = 0.0
-    REAL                :: HCO3C      = 0.0
-    REAL                :: CO3C       = 0.0
-    REAL                :: H2CO3C     = 0.0
+    REAL(RKIND)                :: RK0        = 0.0
+    REAL(RKIND)                :: RK1        = 0.0
+    REAL(RKIND)                :: RK2        = 0.0
+    REAL(RKIND)                :: RK1RK2     = 0.0
+    REAL(RKIND)                :: H1         = 0.0
+    REAL(RKIND)                :: H1_SQUARED = 0.0
+    REAL(RKIND)                :: ALPHE0     = 0.0
+    REAL(RKIND)                :: ALPHE1     = 0.0
+    REAL(RKIND)                :: ALPHE2     = 0.0
+    REAL(RKIND)                :: HCO3C      = 0.0
+    REAL(RKIND)                :: CO3C       = 0.0
+    REAL(RKIND)                :: H2CO3C     = 0.0
 
-    REAL,DIMENSION(9) :: RK           = 0.0
-    REAL,DIMENSION(6) :: SPC
+    REAL(RKIND),DIMENSION(9) :: RK           = 0.0
+    REAL(RKIND),DIMENSION(6) :: SPC
 !-----------------------------------------------
 
   !-----------------------------------------------------------
@@ -188,16 +188,16 @@
   !-------------------------------------------------------------------------
     IMPLICIT NONE
 
-    REAL,INTENT(IN) :: T    ! Temperature (deg C)
-    REAL            :: RES
+    REAL(RKIND),INTENT(IN) :: T    ! Temperature (deg C)
+    REAL(RKIND)            :: RES
 
     ! Locals:
-    REAL, PARAMETER :: A0 = 999.842594
-    REAL, PARAMETER :: A1 =   6.793952E-2
-    REAL, PARAMETER :: A2 =  -9.095290E-3
-    REAL, PARAMETER :: A3 =   1.001685E-4
-    REAL, PARAMETER :: A4 =  -1.120083E-6
-    REAL, PARAMETER :: A5 =   6.536332E-9
+    REAL(RKIND), PARAMETER :: A0 = 999.842594
+    REAL(RKIND), PARAMETER :: A1 =   6.793952E-2
+    REAL(RKIND), PARAMETER :: A2 =  -9.095290E-3
+    REAL(RKIND), PARAMETER :: A3 =   1.001685E-4
+    REAL(RKIND), PARAMETER :: A4 =  -1.120083E-6
+    REAL(RKIND), PARAMETER :: A5 =   6.536332E-9
 
     RES = A0 + ( A1 + ( A2 + ( A3 + ( A4 + A5 * T ) * T ) * T ) * T ) * T
 
@@ -236,22 +236,22 @@
   !------------------------------------------------------------------------
     IMPLICIT NONE
 
-    REAL, INTENT(IN) :: S    ! Salinity (psu)
-    REAL, INTENT(IN) :: T    ! Temperature (deg C)
-    REAL :: RES
+    REAL(RKIND), INTENT(IN) :: S    ! Salinity (psu)
+    REAL(RKIND), INTENT(IN) :: T    ! Temperature (deg C)
+    REAL(RKIND) :: RES
 
     ! Locals from UNESCO 1983 eqn(13) p17.
-    REAL, PARAMETER:: B0 =  8.24493E-1
-    REAL, PARAMETER:: B1 = -4.0899E-3
-    REAL, PARAMETER:: B2 =  7.6438E-5
-    REAL, PARAMETER:: B3 = -8.2467E-7
-    REAL, PARAMETER:: B4 =  5.3875E-9
+    REAL(RKIND), PARAMETER:: B0 =  8.24493E-1
+    REAL(RKIND), PARAMETER:: B1 = -4.0899E-3
+    REAL(RKIND), PARAMETER:: B2 =  7.6438E-5
+    REAL(RKIND), PARAMETER:: B3 = -8.2467E-7
+    REAL(RKIND), PARAMETER:: B4 =  5.3875E-9
 
-    REAL, PARAMETER:: C0 = -5.72466E-3
-    REAL, PARAMETER:: C1 = +1.0227E-4
-    REAL, PARAMETER:: C2 = -1.6546E-6
+    REAL(RKIND), PARAMETER:: C0 = -5.72466E-3
+    REAL(RKIND), PARAMETER:: C1 = +1.0227E-4
+    REAL(RKIND), PARAMETER:: C2 = -1.6546E-6
 
-    REAL, PARAMETER:: D0 =  4.8314E-4
+    REAL(RKIND), PARAMETER:: D0 =  4.8314E-4
 
     RES = sw_smow( T ) +                                                &
     &     ( B0 + ( B1 + ( B2 + ( B3 + B4 * T ) * T ) * T ) * T ) * S +  &
@@ -284,23 +284,23 @@
 
     IMPLICIT NONE
 
-    REAL   ,INTENT(IN)  :: T
-    REAL   ,INTENT(IN)  :: S
-    REAL   ,INTENT(IN)  :: TC
-    REAL   ,INTENT(IN)  :: H
-    REAL   ,INTENT(IN)  :: PCO2
-    REAL   ,INTENT(IN)  :: PH
+    REAL(RKIND)   ,INTENT(IN)  :: T
+    REAL(RKIND)   ,INTENT(IN)  :: S
+    REAL(RKIND)   ,INTENT(IN)  :: TC
+    REAL(RKIND)   ,INTENT(IN)  :: H
+    REAL(RKIND)   ,INTENT(IN)  :: PCO2
+    REAL(RKIND)   ,INTENT(IN)  :: PH
 !--------------------------------------------
-    REAL, PARAMETER      :: DZ      = 0.005
+    REAL(RKIND), PARAMETER      :: DZ      = 0.005
                                         ! combines diffusion through
                                         ! water-atm layer and
                                         ! thickness(cm s-1).
-    REAL                 :: ATM_CO2
-    REAL                 :: H2CO3C
-    REAL                 :: PW
-    REAL                 :: RES
-    REAL                 :: RK0
-    REAL   ,DIMENSION(6) :: SPC
+    REAL(RKIND)                 :: ATM_CO2
+    REAL(RKIND)                 :: H2CO3C
+    REAL(RKIND)                 :: PW
+    REAL(RKIND)                 :: RES
+    REAL(RKIND)                 :: RK0
+    REAL(RKIND)   ,DIMENSION(6) :: SPC
 
     ! Use an updated salclosed function to get the distribution of
     ! carbonate alkalinity species and H+.  Whitman and Turner (1986).
@@ -335,33 +335,33 @@
   !------------------------------------------------------------------------
     IMPLICIT NONE
 
-    REAL, INTENT(IN) :: S    ! Salinity (psu)
-    REAL, INTENT(IN) :: T    ! Temperature (deg C)
-    REAL :: RES
-    REAL :: muSW,KT
-    REAL :: D_02, D_C02
+    REAL(RKIND), INTENT(IN) :: S    ! Salinity (psu)
+    REAL(RKIND), INTENT(IN) :: T    ! Temperature (deg C)
+    REAL(RKIND) :: RES
+    REAL(RKIND) :: muSW,KT
+    REAL(RKIND) :: D_02, D_C02
     INTEGER, INTENT(IN) :: which !0 for Oxygen
                                  !1 for CO2
 
-    REAL, PARAMETER:: K0 = 1.7910
-    REAL, PARAMETER:: K1 = -6.144e-2
-    REAL, PARAMETER:: K2 = 1.4510e-3
-    REAL, PARAMETER:: K3 = -1.6826e-5
-    REAL, PARAMETER:: K4 = -1.5290e-4
-    REAL, PARAMETER:: K5 = 8.3885e-8
-    REAL, PARAMETER:: K6 = 2.4727e-3
-    REAL, PARAMETER:: K7 = 6.0574e-6
-    REAL, PARAMETER:: K8 = -2.6760e-9
-    REAL, PARAMETER:: K9 = 4.8429e-5
-    REAL, PARAMETER:: K10 = -4.7172e-6
-    REAL, PARAMETER:: K11 = 7.5986e-8
+    REAL(RKIND), PARAMETER:: K0 = 1.7910
+    REAL(RKIND), PARAMETER:: K1 = -6.144e-2
+    REAL(RKIND), PARAMETER:: K2 = 1.4510e-3
+    REAL(RKIND), PARAMETER:: K3 = -1.6826e-5
+    REAL(RKIND), PARAMETER:: K4 = -1.5290e-4
+    REAL(RKIND), PARAMETER:: K5 = 8.3885e-8
+    REAL(RKIND), PARAMETER:: K6 = 2.4727e-3
+    REAL(RKIND), PARAMETER:: K7 = 6.0574e-6
+    REAL(RKIND), PARAMETER:: K8 = -2.6760e-9
+    REAL(RKIND), PARAMETER:: K9 = 4.8429e-5
+    REAL(RKIND), PARAMETER:: K10 = -4.7172e-6
+    REAL(RKIND), PARAMETER:: K11 = 7.5986e-8
 
-    REAL, PARAMETER:: D1 = 0.2604e-5
-    REAL, PARAMETER:: D2 = 0.006383e-5
-    REAL, PARAMETER:: D3 = 0.1954e-5
-    REAL, PARAMETER:: D4 = 0.005089e-5
+    REAL(RKIND), PARAMETER:: D1 = 0.2604e-5
+    REAL(RKIND), PARAMETER:: D2 = 0.006383e-5
+    REAL(RKIND), PARAMETER:: D3 = 0.1954e-5
+    REAL(RKIND), PARAMETER:: D4 = 0.005089e-5
 
-    REAL, PARAMETER:: P = 1.01325
+    REAL(RKIND), PARAMETER:: P = 1.01325
 
     KT = 273.15 + T
 
@@ -394,23 +394,23 @@
 
     IMPLICIT NONE
 
-    REAL        , INTENT(IN) :: S  ! Salinity
-    REAL        , INTENT(IN) :: T  ! Temperature (degrees C)
+    REAL(RKIND)        , INTENT(IN) :: S  ! Salinity
+    REAL(RKIND)        , INTENT(IN) :: T  ! Temperature (degrees C)
 
     ! Declare Locals:
 !----------------------------------------------------------------------
-    REAL, PARAMETER:: CONSTANT1  =  273.15
-    REAL, PARAMETER:: CONSTANT2  =    0.01
-    REAL, PARAMETER:: CONSTANT3  = -177.7888
-    REAL, PARAMETER:: CONSTANT4  =  255.5907
-    REAL, PARAMETER:: CONSTANT5  =  146.4813
-    REAL, PARAMETER:: CONSTANT6  =   22.204
-    REAL, PARAMETER:: CONSTANT7  =   -0.037362
-    REAL, PARAMETER:: CONSTANT8  =    0.016504
-    REAL, PARAMETER:: CONSTANT9  =    0.0020564
-    REAL, PARAMETER:: ML_PER_UM  =   44.658
-    REAL          :: T1
-    REAL          :: OSAT ! Oxygen (umol/kg) --function RESULT
+    REAL(RKIND), PARAMETER:: CONSTANT1  =  273.15
+    REAL(RKIND), PARAMETER:: CONSTANT2  =    0.01
+    REAL(RKIND), PARAMETER:: CONSTANT3  = -177.7888
+    REAL(RKIND), PARAMETER:: CONSTANT4  =  255.5907
+    REAL(RKIND), PARAMETER:: CONSTANT5  =  146.4813
+    REAL(RKIND), PARAMETER:: CONSTANT6  =   22.204
+    REAL(RKIND), PARAMETER:: CONSTANT7  =   -0.037362
+    REAL(RKIND), PARAMETER:: CONSTANT8  =    0.016504
+    REAL(RKIND), PARAMETER:: CONSTANT9  =    0.0020564
+    REAL(RKIND), PARAMETER:: ML_PER_UM  =   44.658
+    REAL(RKIND)          :: T1
+    REAL(RKIND)          :: OSAT ! Oxygen (umol/kg) --function RESULT
 !----------------------------------------------------------------------
 
     T1 = ( T + CONSTANT1 ) * CONSTANT2
@@ -436,12 +436,12 @@
     IMPLICIT NONE
 
 !----------------------------------------------------------------------
-    REAL, INTENT(IN) :: T  ! Temperature (degrees C) 
-    REAL, INTENT(IN) :: K  ! Constant     
+    REAL(RKIND), INTENT(IN) :: T  ! Temperature (degrees C) 
+    REAL(RKIND), INTENT(IN) :: K  ! Constant     
 !----------------------------------------------------------------------    
-    REAL, PARAMETER  :: Tk = 25.
-    REAL             :: FACTOR    
-    REAL             :: Tadj ! Temperature adjusted rate function 
+    REAL(RKIND), PARAMETER  :: Tk = 25.
+    REAL(RKIND)             :: FACTOR    
+    REAL(RKIND)             :: Tadj ! Temperature adjusted rate function 
 !----------------------------------------------------------------------       
     FACTOR = LOG10( 2.0 ) * 0.1 * ( Tk - T )
     Tadj = LOG10( K ) - FACTOR
@@ -460,19 +460,19 @@
   !-------------------------------------------------------------------   
     IMPLICIT NONE
     
-    REAL, INTENT(IN) :: O2
-    REAL, INTENT(IN) :: NH4
-    REAL, INTENT(IN) :: KO2
-    REAL, INTENT(IN) :: KNH4
-    REAL, INTENT(IN) :: nitmax 
-    REAL, INTENT(IN) :: TEMP
-    REAL, INTENT(OUT):: R_11  
+    REAL(RKIND), INTENT(IN) :: O2
+    REAL(RKIND), INTENT(IN) :: NH4
+    REAL(RKIND), INTENT(IN) :: KO2
+    REAL(RKIND), INTENT(IN) :: KNH4
+    REAL(RKIND), INTENT(IN) :: nitmax 
+    REAL(RKIND), INTENT(IN) :: TEMP
+    REAL(RKIND), INTENT(OUT):: R_11  
 
-    REAL :: FACTOR
-    REAL :: TQ1
-    REAL :: TQ2
-    REAL :: RQ1
-    REAL :: RQ11
+    REAL(RKIND) :: FACTOR
+    REAL(RKIND) :: TQ1
+    REAL(RKIND) :: TQ2
+    REAL(RKIND) :: RQ1
+    REAL(RKIND) :: RQ11
 !-------------------------------------------------
     ! Use the Q10 relationship to determine the rates.
 
@@ -499,59 +499,59 @@
   !---------------------------------------------------------- 
     IMPLICIT NONE
    
-    REAL, INTENT(IN) :: OM1
-    REAL, INTENT(IN) :: OM2
-    REAL, INTENT(IN) :: O2
-    REAL, INTENT(IN) :: NO3
-    REAL, INTENT(IN) :: KG1
-    REAL, INTENT(IN) :: KG2
-    REAL, INTENT(IN) :: KO2
-    REAL, INTENT(IN) :: KstarO2
-    REAL, INTENT(IN) :: KNO3
-    REAL, INTENT(IN) :: X1
-    REAL, INTENT(IN) :: Y1
-    REAL, INTENT(IN) :: Z1
-    REAL, INTENT(IN) :: X2
-    REAL, INTENT(IN) :: Y2
-    REAL, INTENT(IN) :: Z2
-    REAL, INTENT(IN) :: TEMP
-    REAL, DIMENSION(10),INTENT(OUT):: RC
+    REAL(RKIND), INTENT(IN) :: OM1
+    REAL(RKIND), INTENT(IN) :: OM2
+    REAL(RKIND), INTENT(IN) :: O2
+    REAL(RKIND), INTENT(IN) :: NO3
+    REAL(RKIND), INTENT(IN) :: KG1
+    REAL(RKIND), INTENT(IN) :: KG2
+    REAL(RKIND), INTENT(IN) :: KO2
+    REAL(RKIND), INTENT(IN) :: KstarO2
+    REAL(RKIND), INTENT(IN) :: KNO3
+    REAL(RKIND), INTENT(IN) :: X1
+    REAL(RKIND), INTENT(IN) :: Y1
+    REAL(RKIND), INTENT(IN) :: Z1
+    REAL(RKIND), INTENT(IN) :: X2
+    REAL(RKIND), INTENT(IN) :: Y2
+    REAL(RKIND), INTENT(IN) :: Z2
+    REAL(RKIND), INTENT(IN) :: TEMP
+    REAL(RKIND), DIMENSION(10),INTENT(OUT):: RC
     
     ! Begin Locals:
 !---------------------------------------------    
-    REAL:: FACTOR         
-    REAL:: RQ1           
-    REAL:: RQ2          
-    REAL:: TQ1         
-    REAL:: TQ2        
-    REAL:: RQ21      
-    REAL:: RQ22     
-    REAL:: RCT1           
-    REAL:: RCT2          
-    REAL:: R11          
-    REAL:: R12         
-    REAL:: R21        
-    REAL:: R22       
-    REAL:: R1_SUM    
-    REAL:: R2_SUM        
-    REAL:: FBNO3         
-    REAL:: GAM14      
-    REAL:: GAM24
-    REAL:: BET14
-    REAL:: BET24
-    REAL:: A14
-    REAL:: A24     
-    REAL:: RCH2O1         
-    REAL:: RCH2O2        
-    REAL:: RO2          
-    REAL:: RNO3        
-    REAL:: RPO4       
-    REAL:: RTC       
-    REAL:: RNH4
-    REAL:: RSi
-    REAL:: RALK
-    REAL:: RN2
-    REAL,DIMENSION(2) :: R   
+    REAL(RKIND):: FACTOR         
+    REAL(RKIND):: RQ1           
+    REAL(RKIND):: RQ2          
+    REAL(RKIND):: TQ1         
+    REAL(RKIND):: TQ2        
+    REAL(RKIND):: RQ21      
+    REAL(RKIND):: RQ22     
+    REAL(RKIND):: RCT1           
+    REAL(RKIND):: RCT2          
+    REAL(RKIND):: R11          
+    REAL(RKIND):: R12         
+    REAL(RKIND):: R21        
+    REAL(RKIND):: R22       
+    REAL(RKIND):: R1_SUM    
+    REAL(RKIND):: R2_SUM        
+    REAL(RKIND):: FBNO3         
+    REAL(RKIND):: GAM14      
+    REAL(RKIND):: GAM24
+    REAL(RKIND):: BET14
+    REAL(RKIND):: BET24
+    REAL(RKIND):: A14
+    REAL(RKIND):: A24     
+    REAL(RKIND):: RCH2O1         
+    REAL(RKIND):: RCH2O2        
+    REAL(RKIND):: RO2          
+    REAL(RKIND):: RNO3        
+    REAL(RKIND):: RPO4       
+    REAL(RKIND):: RTC       
+    REAL(RKIND):: RNH4
+    REAL(RKIND):: RSi
+    REAL(RKIND):: RALK
+    REAL(RKIND):: RN2
+    REAL(RKIND),DIMENSION(2) :: R   
 !---------------------------------------------     
     ! End Locals   
 
@@ -647,10 +647,10 @@
   !--------------------------------------------------------------------   
     IMPLICIT NONE
     
-    REAL,INTENT(IN) :: O2  ! Oxygen concentration
-    REAL,INTENT(IN) :: KO2 ! Inhibition constant
-    REAL            :: RES
-    REAL:: PO2
+    REAL(RKIND),INTENT(IN) :: O2  ! Oxygen concentration
+    REAL(RKIND),INTENT(IN) :: KO2 ! Inhibition constant
+    REAL(RKIND)            :: RES
+    REAL(RKIND):: PO2
 
     PO2  = MAX( 0.0, O2 )
 

@@ -39,26 +39,26 @@
 !-------------------------------------------------
 ! Declare variables in the interface
 !------------------------------------------------- 
-  REAL   , INTENT(IN)    :: lat          ! Latitude (deg); lat > 0 means
+  REAL*8   , INTENT(IN)    :: lat          ! Latitude (deg); lat > 0 means
                                          !                 North of
                                          !                 Equator
-  REAL   , INTENT(IN)    :: lon          ! Longitude (deg E, 0 <= lon < 360); 
-  REAL   , INTENT(IN)    :: rhr          ! decimal Hour of Julian Day  
+  REAL*8   , INTENT(IN)    :: lon          ! Longitude (deg E, 0 <= lon < 360); 
+  REAL*8   , INTENT(IN)    :: rhr          ! decimal Hour of Julian Day  
   INTEGER, INTENT(IN)    :: julianDay    ! Julian Day GMT
   
 !-------------------------------------------------
 ! Local variables
 !------------------------------------------------- 
-  REAL   :: costmp
-  REAL   :: sdec
-  REAL   :: rad
-  REAL   :: rlat 
-  REAL   :: rsdec   
-  REAL   :: rthez 
-  REAL   :: sunangle  ! returned as RESULT 
-  REAL   :: tc  
-  REAL   :: thez
-  REAL   :: xha
+  REAL*8   :: costmp
+  REAL*8   :: sdec
+  REAL*8   :: rad
+  REAL*8   :: rlat 
+  REAL*8   :: rsdec   
+  REAL*8   :: rthez 
+  REAL*8   :: sunangle  ! returned as RESULT 
+  REAL*8   :: tc  
+  REAL*8   :: thez
+  REAL*8   :: xha
 
 
 #ifdef DEBUG

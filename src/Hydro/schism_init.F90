@@ -346,15 +346,6 @@
       tr_mname(1)='TEM'
       tr_mname(2)='SAL'
 
-#ifdef USE_GEN
-!      call get_param('param.in','ntracer_gen',1,ntrs(3),tmp,stringvalue)
-      ntrs(3)=ntracer_gen
-      if(ntrs(3)<=0) call parallel_abort('INIT: ntrs(3)<=0')
-      !settling vel
-!      call get_param('param.in','gen_wsett',2,itmp,gen_wsett,stringvalue)
-      tr_mname(3)='GEN'
-#endif
-
 !L3
 #ifdef USE_GEN
        if(myrank==0) write(16,*) 'Initialize CGEM: in schism_init'
