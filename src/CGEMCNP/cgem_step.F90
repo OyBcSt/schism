@@ -1,9 +1,9 @@
 !======================================================================     
-  Subroutine cgem_step( ff,ff_new,dT, S, T, PAR, Wind, lat, d_sfc, is_bottom, is_day )
+  Subroutine cgem_step( ff,ff_new,dT, S, T, PAR, Wind, lat, d_sfc, is_bottom, Rad,inea )
 
 !======================================================================
   use cgem
-  use cgem_growth
+  use calcAgrow
   use cgem_utils
   use date_time
   use mvars
@@ -15,12 +15,12 @@
 ! Interface variables
 !---------------------------------------------------------------------
   logical, intent(in)  :: is_bottom ! Is it the bottom?  For instant remineralization
-  logical, intent(in)  :: is_day    ! Uptake only occurs during the day
+  integer, intent(in)  :: inea !element
   real(rkind), intent(in)     :: lat       ! For mocsy- latitude 
   real(rkind), intent(in)     :: d_sfc     ! For mocsy
   real(rkind), intent(in)     :: PAR       ! PAR at cell center
   real(rkind), intent(in)     :: Wind 
-  real(rkind), intent(in)     :: S,T,dT
+  real(rkind), intent(in)     :: S,T,dT,Rad
   real(rkind),intent(in), dimension(nf) :: ff
   real(rkind),intent(out), dimension(nf) :: ff_new
 !---------------------------------------------------------------------------------------
@@ -134,7 +134,6 @@
   real(rkind)    :: CDOM,NO3,NH4,DIC,O2,PO4,Si,ALK
   real(rkind)    :: OM1CA,OM1NA,OM1PA,OM1CZ,OM1NZ,OM1PZ
   real(rkind)    :: OM2CA,OM2NA,OM2PA,OM2CZ,OM2NZ,OM2PZ
-!  real(rkind)    :: pH
 !-----------------------------------------------------------------------
 ! Other variables 
   real(rkind)            :: PrimProd                ! Primary production (photosynthesis)
@@ -144,17 +143,15 @@
   real(rkind) :: dTd
 !------------------------------------------------------------------
 !Output vars for alkalinity subroutine:
-  real(rkind) :: ph_calc(1), pco2_calc(1), fco2(1), co2(1), hco3(1), co3(1), omegaa(1), omegac(1), betad_calc(1) 
-  real(rkind) :: rhosw(1), p(1), tempis(1)
-  real(rkind) :: patm(1) = 1.
-  real(rkind) :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
-  real(rkind) :: m_lat(1),m_T(1),m_S(1),m_d_sfc(1)
-!mocsy needs lat to be an array
-  m_lat = lat
-  m_T = T
-  m_S = S
-  m_d_sfc = d_sfc
-!convert to timestep in days
+  real :: ph_calc(1), pco2_calc(1), fco2(1), co2(1), hco3(1), co3(1), omegaa(1), omegac(1), betad_calc(1) 
+  real :: rhosw(1), p(1), tempis(1)
+  real :: patm(1) = 1.
+  real :: m_alk(1), m_dic(1), m_si(1), m_po4(1)
+  real :: m_lat(1)
+  real :: m_d_sfc(1),m_T(1),m_S(1)
+  real :: pH
+
+  !convert to timestep in days
   dTd = dt/SDay
 
   ! Renaming is for readability...
@@ -225,7 +222,7 @@
   !------------------------------------------------------------------------     
   ! Nutrient limited uptake:
   ! Find Rate Limiting Nutrient RLN for N, P, and Si:
-  if(is_day) then  !Nutrient uptake only takes place during the day
+  if(Rad.le.tiny(x)) then  !Nutrient uptake only takes place during the day
      vN = 0.
      vP = 0.
      vSi = 0.
@@ -299,7 +296,8 @@
   !---------------------------------------------------------
   ff_new(iA(:)) = A(:)        &
   & + ( Agrow(:) - Aresp(:) - ZgrazA_tot(:) - Amort(:) )*dTd
-
+  if(debug.eq.2.and.inea.eq.10) write(6,*) "PAR",PAR
+  if(debug.eq.2.and.inea.eq.10) write(6,*) "A,Agrow,Aresp,ZgrazA_tot,Amort,dTd",A,Agrow,Aresp,ZgrazA_tot,Amort,dTd
   !----------------------------------------------------------------------
   !-Qn: Phytoplankton Nitrogen Quota (mmol-N/cell)
   !----------------------------------------------------------------------
@@ -314,6 +312,7 @@
         ff_new(iQn(isp)) = DMIN1(DMAX1(Qn(isp) + (vN(isp) - Qn(isp)*uA(isp))*dTd,QminN(isp)),QmaxN(isp))
     enddo
   endif
+  if(debug.eq.2.and.inea.eq.10) write(6,*) "Qn,vN,Qp,uA",Qn,vN,Qp,vP,uA
 
   !----------------------------------------------------------------------
   !-Qp: Phytoplankton Phosphorus Quota (mmol-P/cell)
@@ -350,6 +349,7 @@
   ZunP(:)    = (1.-Zeffic(:))*(ZgrazP(:)-ZslopP(:))    ! Unassimilated (mmol-P/m3/d)
   ZinP(:)    = ZgrazP(:) - ZslopP(:) - ZunP(:)         ! Ingested (mmol-P/m3/d)
   !-------------------------------------------------
+  if(debug.eq.2.and.inea.eq.10) write(6,*) "ZslopC,ZunC,ZinC",ZslopC,ZunC,ZinC
 
   !------------------------------------         
   ! Liebigs Law for zooplankton group isz 
@@ -369,6 +369,7 @@
       ZegN(isz) = 0.
   endif
   enddo
+
   !------------------------------------------------
 
   !-----------------------------------------------------
@@ -402,6 +403,7 @@
   !---------------------------------------------------------
   ff_new(iZ(:))  = DMAX1( Z(:)                         &
   &      + (Zgrow(:) - Zresp(:) - Zmort(:))*dTd, 1.)
+  if(debug.eq.2.and.inea.eq.10) write(6,*) "Z,Zgrow,Zresp,Zmort",Z,Zgrow,Zresp,Zmort
 
   !-----------------------------------------------------------
   ! Remineralization - reactions
@@ -420,14 +422,19 @@
   ! Carbon Chemistry
   !--------------------------------------------------------------
   !!! MOCSY alkalinity expressions:
-  m_alk = ALK/1000.0
-  m_dic = DIC/1000.0
-  m_si  = Si/1000.0
-  m_po4 = PO4/1000.0
-!  call vars(ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
-!  &    m_T, m_S, m_alk, m_dic, m_si, m_po4, patm, m_d_sfc, m_lat, 1, &
-!  &    'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
-!  pH = ph_calc(1)
+  m_alk = ALK/1000.d0
+  m_dic = DIC/1000.d0
+  m_si  = Si/1000.d0
+  m_po4 = PO4/1000.d0
+  m_S = S
+  m_T = T
+  m_d_sfc = d_sfc
+  m_lat = lat
+
+  call vars(ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
+  &    m_T, m_S, m_alk, m_dic, m_si, m_po4, patm, m_d_sfc, m_lat, 1, &
+  &    'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
+  pH = ph_calc(1)
 
   !------------------------------------------------------------
   ! Particulate and Dissolved dead phytoplankton, rate of remineralization
@@ -524,7 +531,7 @@
   RALK  = RALK_A + RALK_Z + RALK_R + RALK_BC - 2.*R_11 ! (mmol-HCO3/m3/d)
   RN2   = RN2_A  + RN2_Z  + RN2_R  + RN2_BC            ! (mmol-N2/m3/d)
   !--------------------------------------------------------------------
-
+  if(debug.eq.2.and.inea.eq.10) write(6,*) "O,N,NH,P,D,S,N2,11",RO2,RNO3,RNH4,RPO4,RDIC,RSi,RALK,RN2,R_11
   !---------------------------------------------------------------------
   ! Stoichiometry - calculate C:N:P ratios for Remineralization equations
   !---------------------------------------------------------------------
@@ -658,7 +665,8 @@
   & (RALK + AupN*NO3/(Ntotal)            &
   &          - AupN*NH4/(Ntotal)         &
   &          + AupP + 4.8*AupP)*dTd
-
+  !Tracer
+  ff_new(iTr) = ff(iTr)
 
   ! Before transport, Combine A/Q's
   ff_new(iQn(:)) = ff_new(iQn(:)) * ff_new(iA(:))

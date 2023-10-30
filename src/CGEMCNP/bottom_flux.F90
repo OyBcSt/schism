@@ -1,19 +1,17 @@
-subroutine cgem_flux(dT,nz,istep)
+subroutine cgem_flux(ff,ff_new,dT,nz,dz,T,S,Wind,pH,istep)
 
-use grid, only:T,S,dz,Wind,km
 !This is called after cgem_step, which returns ff_new
 !This modifies the surface and bottom cells of ff_new
-use cgem, only:ff_new,Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,pCO2,iALK,iSi,iPO4,pH, &
-        & iSOC,iA,iNO3,iNH4,iNutEx,nospA,&
-        & iOM1_A,iOM2_A,iOM1_Z,iOM2_Z,iOM1_R,iOM2_R,iOM1_BC,iOM2_BC,nf,fmin
-use SDM
+use cgem, only:Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,pCO2,iALK,iSi,iPO4, &
+        & iSOC,iA,iNO3,iNH4,iNutEx,nospA,nf,fmin
 use MOD_UTILITIES
 use schism_glbl, only : rkind
 
 implicit none
 
 integer, intent(in) :: istep
-real(rkind), intent(in) :: dT
+real(rkind), intent(in) :: dT,pH,ff
+real(rkind), intent(in) :: dz,T,S,Wind 
 integer,intent(in) :: nz
 real(rkind) :: T_sfc, Sal_sfc, O2_sfc, Sc, Op_umole, rhow, Op, OsDOp
 real(rkind) :: Vtrans, alpha_O2, O2_atF,zs, DIC_sfc, CO2_atF
@@ -94,7 +92,7 @@ if(Which_fluxes(iDICsurf).eq.1) then
              ! Units of gas_exchange are mmol CO2 m-2 s-1 
              !----------------------------------------------------------
 !use mocsy instead but calculate to compare
-             CO2_atF = gas_exchange(T_sfc,Sal_sfc,DIC_sfc,zs,pH(1),pCO2)
+             CO2_atF = gas_exchange(T_sfc,Sal_sfc,DIC_sfc,zs,pH,pCO2)
              ff_new(1,iDIC) = DMAX1(ff_new(1,iDIC) - CO2_atF/dz(1)*dT,fmin(iDIC))
 
 else

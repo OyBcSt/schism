@@ -3,7 +3,7 @@ module cgem
 !CGEM STATE VARIABLES
 use, intrinsic :: iso_fortran_env, only: stderr => error_unit
 use schism_glbl, only : rkind
-
+use grid, only : km
 implicit none
 
 save
@@ -24,6 +24,9 @@ real(rkind) :: adjust_fac,h_massconsv
 real(rkind), dimension(:), allocatable :: ws
 real(rkind), dimension(:), allocatable :: fmin
 real(rkind) :: x !for tiny
+
+!mocsy/pH
+real(rkind) :: pCO2
 
 !Fixed Stoichiometry:
 real(rkind) :: sx1R,sy1R,sx2R,sy2R
@@ -188,11 +191,15 @@ integer, parameter :: iSDM     = 8 !Sediment Diagenesis Model
 !        -- Alkalinity
 !-------------------------------------------
       integer :: iALK
+!-------------------------------------------
+!-Tr: tracer
+!-------------------------------------------
+      integer :: iTr
 
 !Total number of state variables
       integer :: nf
 
-
+real(rkind) :: sinkTr
 !----INPUT_VARS_CGEM
 !--Switches in GEM---------
 integer Which_fluxes(8)
@@ -276,7 +283,6 @@ real(rkind) nitmax
 real(rkind) KO2
 real(rkind) KstarO2
 real(rkind) KNO3
-real(rkind) pCO2
 real(rkind) KGcdom
 real(rkind) CF_SPM
 !----Other including Boundary Conditions------------
@@ -338,7 +344,7 @@ subroutine cgem_read
   character(len=1000) :: line
   !http://degenerateconic.com/namelist-error-checking.html
   namelist /switches/ Which_fluxes,Which_temperature,Which_uptake,Which_quota,Which_irradiance,&
-    Which_photosynthesis,Which_growth,Which_wind,Which_rad
+    Which_photosynthesis,Which_growth,Which_wind,Which_rad,sinkTr
   namelist /optics/ Kw,Kcdom,Kspm,Kchla,astar490,aw490,astarOMA,astarOMZ,astarOMR,astarOMBC,PARfac,sinkCDOM
   namelist /temperature/ Tref,KTg1,KTg2,Ea
   namelist /phytoplankton/ umax,CChla,alpha,beta,respg,respb,QminN,QminP,QmaxN,QmaxP,Kn,Kp,Ksi,KQn,&
@@ -558,9 +564,12 @@ write(6,*) "Begin cgem_allocate"
 !        -- Alkalinity
 !-------------------------------------------
       iALK = counter+24
+!-------------------------------------------
+!-Tr
+     iTr = counter + 25 
 
 !How many state variables
-      nf = iALK
+      nf = iTr
 
 !----allocate INPUT_VARS_CGEM
 
@@ -784,6 +793,8 @@ ws(iOM2R) = sinkOM2R
 
 ws(iOM1BC) = sinkOM1BC
 ws(iOM2BC) = sinkOM2BC
+
+ws(iTr) = sinkTr
 #ifdef DEBUG
 write(6,*) "ws",ws
 #endif

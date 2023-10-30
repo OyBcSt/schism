@@ -15,7 +15,7 @@ write(6,*) "Begin cgem_init"
 !SCHISM 
 !We have to figure out what to do about tracers
 !check that nospA and nospZ are such that tracers was set correctly in param.nml
-  check_tracers = nospA*3+nospZ+16+8
+  check_tracers = nospA*3+nospZ+25
 #ifdef DEBUG
 write(6,*) "In cgem_setup,nospA,nospZ,tracers,check_tracers",nospA,nospZ,tracers,check_tracers
 #endif

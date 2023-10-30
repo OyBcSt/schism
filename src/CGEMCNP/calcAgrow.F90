@@ -1,4 +1,4 @@
-module cgem_growth
+module calcAgrow
 
 use cgem, only: nospA,nospZ,writecsv,umax,QminN,QmaxN,QminP,QmaxP,nfQs,   &
   & respg,respb,alphad,betad,Tref,KTg1,KTg2,Ea,KQn,KQp,KSi,Qc, &
@@ -328,4 +328,4 @@ end subroutine func_T
 
 ! Chla_tot(k) =  Chla_tot(k) + A(k,isp) * Qc(isp) * 12. * (1./CChla(isp)) 
 
-end module cgem_growth
+end module calcAgrow 

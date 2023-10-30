@@ -112,6 +112,16 @@
         d_sfc(k)     = 0.5*dz(k)+ SUM(dz(1:k-1))
       enddo
 
+     if(debug.eq.1) then
+        write(6,*) "Chla",Chla_tot
+        write(6,*) "CDOM",CDOM_tot
+        write(6,*) "OM1A",OM1A_tot
+        write(6,*) "OM1Z",OM1Z_tot
+        write(6,*) "OM1R",OM1R_tot
+        write(6,*) "OM1BC",OM1BC_tot
+        write(6,*) "d_sfc",d_sfc
+     endif
+
    do k=1,nz
 !Calculate absorption coefficients:
       aSw_mid = aw490  !Sea water absorption at mid cell

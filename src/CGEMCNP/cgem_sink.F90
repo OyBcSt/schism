@@ -1,5 +1,5 @@
 subroutine cgem_sink(ff,ff_new,ws,nz,dz,dT,i,istep,myrank)
-!call cgem_sink(ff_in,ff_out,nz,dz,dt,i,istep,myrank)
+!call cgem_sink(fs_in,fs_out,ws(mm),nz,dz,dt,i,istep,myrank)
 !This is called after cgem_step and cgem_flux, which returns ff
 use grid, only:km
 use cgem, only:nf,adjust_ws,adjust_fac,debug
@@ -30,7 +30,7 @@ km1 = nz-1
       wsc = ws
     endif
 
-      wsc = wsc/86400.d0
+      wsc = wsc
 
      !Nothing sinking in
      mass_in(1) = 0.d0

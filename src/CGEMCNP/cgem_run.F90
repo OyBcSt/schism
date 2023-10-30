@@ -13,7 +13,7 @@ subroutine cgem_run(istep,myrank)
   implicit none
 
   integer, intent(in) :: istep,myrank
-  integer :: itmp1,itmp2,i,m,im,mm,k
+  integer :: itmp1,itmp2,i,m,im,mm,k,nz
   integer :: TC_8
   logical :: dowrite
   real :: x
@@ -45,6 +45,9 @@ subroutine cgem_run(istep,myrank)
 
   !If not dry, run CGEM
 
+    nz = nvrt - kbe(i)
+    !write(6,*) "nvrt,kbe(i),kbe(i)+1",nvrt,kbe(i),kbe(i)+1,nz
+
     !Set surface and bottom flux, and body forces to zero
     flx_sf(itmp1:itmp2,i)=0.d0
     flx_bt(itmp1:itmp2,i)=0.d0
@@ -61,7 +64,7 @@ subroutine cgem_run(istep,myrank)
   ! shortwave radiation (hardcoded 4/30/14 to 0.43).
   ! Hardcoded to 0.47 on 2/11/16, Re: Tsubo and Walker, 2005
   ! PARfac is a multiplication factor for testing
-    Rad = (0.47*Rad) * PARfac
+    !Rad = (0.47*Rad) * PARfac
   endif
 
   if(Which_wind.eq.1) then
@@ -88,41 +91,54 @@ else
   !Input is ff, output is ff_new
   !call cgem_step(TC_8,cgemdt,istep,i,myrank)
   !Call the light model
-     im = 0 
-     do k=nvrt,kbe(i)+1,-1
-        im = im+1
+     im = nz 
+     do k=kbe(i)+1,nvrt
         ff_in(im,1:nf) = tr_el(itmp1:itmp2,k,i)
         dz(im) = ze(k,i)-ze(k-1,i)
+        im = im-1
      enddo !k
 
-  call call_iop_par(ff_in,im,TC_8,Rad,dz,lat,lon,PAR)
+  call call_iop_par(ff_in,nz,TC_8,Rad,dz,lat,lon,PAR)
   if(i.eq.10.and.debug.eq.1) write(6,*) "PAR",PAR
   if(i.eq.10.and.debug.eq.1) write(6,*) "dz",dz
-  if(i.eq.10.and.debug.eq.1) write(6,*) "tot_dz",SUM(dz(1:im))
+  if(i.eq.10.and.debug.eq.1) write(6,*) "istep,i,nz,nvrt,kbe(i),tot_dz",istep,i,nz,nvrt,kbe(i),SUM(dz(1:nz))
   !Update schism tracer variables with newly calculated cgem variables
-   im = 0 
-   do k=nvrt,kbe(i)+1,-1
-      im = im + 1
+   im = nz 
+   do k=kbe(i)+1,nvrt
       T = tr_el(1,k,i)
       S = tr_el(2,k,i)
       ff(1:nf) = tr_el(itmp1:itmp2,k,i)
       d_sfc = -1.*(ze(k-1,i)-ze(nvrt,i))
-      if(i.eq.10.and.k.eq.nvrt.and.debug.eq.1) write(6,*) "istep=",istep
-      if(i.eq.10.and.k.eq.nvrt.and.debug.eq.1) write(6,*) i,k,nvrt,d_sfc,T,S,Rad,dt
-      call cgem_step(ff,ff_new,dT, S, T, PAR(im), Wind, lat, d_sfc, .FALSE., .TRUE.)
+      if(i.eq.10.and.debug.eq.1) write(6,*) "k,istep=",k,istep
+      if(i.eq.10.and.debug.eq.1) write(6,*) i,k,nvrt,d_sfc,T,S,Rad,dt,PAR(im)
+      if(i.eq.10.and.debug.eq.1) write(6,*) "ff",ff
+      call cgem_step(ff,ff_new,dT, S, T, PAR(im), Wind, lat, d_sfc, .FALSE., Rad, i)
+      !    cgem_step(ff,ff_new,dT, S, T, PAR, Wind, lat, d_sfc, is_bottom, is_day, inea )
       tr_el(itmp1:itmp2,k,i) = ff_new(1:nf)
-      if(i.eq.10.and.k.eq.nvrt.and.debug.eq.1) write(6,*) "tr",tr_el(itmp1:itmp2,k,i)
+      if(i.eq.10.and.debug.eq.1) write(6,*) "ff_new",ff_new
+      if(i.eq.10.and.debug.eq.1) write(6,*) "tr",tr_el(itmp1:itmp2,k,i)
       if(i.eq.10.and.debug.eq.1) write(6,*) "d_sfc",d_sfc
+      im = im-1
    enddo !k
-endif !end sink cgem
+endif !end cgem
 
     if(sinkwcgem) then
       do m=itmp1,itmp2
-         mm=m+2
+         mm=m-2
          if(ws(mm).gt.tiny(x)) then
-           fs_in(:) = tr_el(m,:,i)
-           call cgem_sink(fs_in,fs_out,im,dz,dt,i,istep,myrank)
-           tr_el(m,:,i) = fs_out(:)
+            im = nz
+          do k=kbe(i)+1,nvrt
+            fs_in(im) = tr_el(m,k,i)
+            im = im-1
+          enddo !k
+           call cgem_sink(fs_in,fs_out,ws(mm),nz,dz,dt,i,istep,myrank)
+
+          im = nz
+          do k=kbe(i)+1,nvrt
+            tr_el(m,k,i) = fs_out(im)
+            im = im-1
+          enddo !k
+
          endif
       enddo !k
       if(i.eq.10.and.k.eq.nvrt.and.debug.eq.1) write(6,*) "tr",tr_el(itmp1:itmp2,k,i)
