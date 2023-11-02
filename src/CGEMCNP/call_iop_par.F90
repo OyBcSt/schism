@@ -112,7 +112,7 @@
         d_sfc(k)     = 0.5*dz(k)+ SUM(dz(1:k-1))
       enddo
 
-     if(debug.eq.1) then
+     if(debug.eq.2) then
         write(6,*) "Chla",Chla_tot
         write(6,*) "CDOM",CDOM_tot
         write(6,*) "OM1A",OM1A_tot

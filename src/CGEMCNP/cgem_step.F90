@@ -1,5 +1,5 @@
 !======================================================================     
-  Subroutine cgem_step( ff,ff_new,dT, S, T, PAR, Wind, lat, d_sfc, is_bottom, Rad,inea )
+  Subroutine cgem_step( ff,ff_new,dT, S, T, PAR, Wind, lat, dz, d_sfc, is_surface, is_bottom, Rad,inea )
 
 !======================================================================
   use cgem
@@ -14,10 +14,12 @@
 !---------------------------------------------
 ! Interface variables
 !---------------------------------------------------------------------
-  logical, intent(in)  :: is_bottom ! Is it the bottom?  For instant remineralization
+  logical, intent(in)  :: is_bottom ! Bottom fluxes 
+  logical, intent(in)  :: is_surface ! Surface fluxes 
   integer, intent(in)  :: inea !element
   real(rkind), intent(in)     :: lat       ! For mocsy- latitude 
   real(rkind), intent(in)     :: d_sfc     ! For mocsy
+  real(rkind), intent(in)     :: dz        ! For fluxes 
   real(rkind), intent(in)     :: PAR       ! PAR at cell center
   real(rkind), intent(in)     :: Wind 
   real(rkind), intent(in)     :: S,T,dT,Rad
@@ -377,9 +379,9 @@
   do isz=1,nospZ
       if(ZegC(isz).lt.0.0) then
           ZegC(isz) = 0.0
-          !ZegN(isz) = 0.
-          !ZegP(isz) = 0.
-          write(6,*) "ZegC,ZegN,ZegP",ZegC(isz),ZegN(isz),ZegP(isz)
+          ZegN(isz) = 0.
+          ZegP(isz) = 0.
+          !write(6,*) "ZegC,ZegN,ZegP",ZegC(isz),ZegN(isz),ZegP(isz)
       endif
   enddo
 
@@ -672,7 +674,11 @@
   ff_new(iQn(:)) = ff_new(iQn(:)) * ff_new(iA(:))
   ff_new(iQp(:)) = ff_new(iQp(:)) * ff_new(iA(:))
 
-
+  if(is_surface.and.debug.eq.3) write(6,*) "before",ff_new(iO2),dz
+  if(is_surface.and.debug.eq.3) write(6,*) "before",ff_new
+  if(is_surface) call surface_flux(ff_new,dT,dz,T,S,Wind,pH)
+  if(is_surface.and.debug.eq.3) write(6,*) "after",ff_new(iO2)
+  if(is_surface.and.debug.eq.3) write(6,*) "after",ff_new
   return
   end subroutine cgem_step
 !---------------------------------------------------------------------- 

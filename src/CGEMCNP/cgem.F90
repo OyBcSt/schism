@@ -19,7 +19,8 @@ integer :: nospZ
 integer :: skipcgem,checkwindrad,writecsv,debug
 real(rkind) :: eps
 real(rkind) :: adjust_fac,h_massconsv
-
+real(rkind) :: cgemlat,cgemlon
+logical     :: do_inflation
 !Sinking
 real(rkind), dimension(:), allocatable :: ws
 real(rkind), dimension(:), allocatable :: fmin
@@ -308,7 +309,7 @@ subroutine cgem_dim
   integer           :: istat,iunit
   character(len=1000) :: line
   !http://degenerateconic.com/namelist-error-checking.html
-  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug,sinkwcgem,adjust_ws,adjust_fac,h_massconsv
+  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,writecsv,debug,sinkwcgem,adjust_ws,adjust_fac,h_massconsv,do_inflation,cgemlat,cgemlon
 
 #ifdef DEBUG
 write(6,*) "Begin cgem_dim"
