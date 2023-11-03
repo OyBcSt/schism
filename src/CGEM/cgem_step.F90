@@ -382,7 +382,7 @@
           !ZegC(isz) = 0.0
           !ZegN(isz) = 0.
           !ZegP(isz) = 0.
-          write(6,*) "ZegC,ZegN,ZegP",ZegC(isz),ZegN(isz),ZegP(isz)
+          write(6,*) "ZegC.lt.0: ZegC,ZegN,ZegP",ZegC(isz),ZegN(isz),ZegP(isz)
           stop
       endif
   enddo
