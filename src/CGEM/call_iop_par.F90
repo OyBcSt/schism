@@ -1,8 +1,8 @@
   subroutine call_iop_par(ff,nz,TC_8,PARsurf,dz,lat,lon,PARdepth)
 
-  use cgem, only: nf,which_irradiance,Kw,Kchla,Kspm,Kcdom,       &
+  use cgem, only: nf,nospA,Kw,Kchla,Kspm,Kcdom,       &
    &              aw490,astar490,astarOMA,astarOMZ,astarOMR,astarOMBC,&
-   &              nospA,iOM1CA,iOM1CZ,iOM1R,iOM1BC,iCDOM,CChla,iA,Qc,debug
+   &              iOM1CA,iOM1CZ,iOM1R,iOM1BC,iCDOM,CChla,iA,Qc,debug,CF_SPM
   use grid, only: iYrS,km
   use schism_glbl, only : rkind
   use date_time
@@ -27,9 +27,8 @@
   real(rkind), dimension(km) :: Chla_mass, CDOM_mass, OM1A_mass, OM1Z_mass, OM1R_mass, OM1BC_mass
   real(rkind) :: Z ! Angle of the sun
   real(rkind) :: calc_solar_zenith !function
-  real(rkind) a490_mid, aSw_mid, aChl490_mid, aCDOM490_mid, bbChl490_mid, bb490_mid
-  real(rkind) aOM1A490_mid, aOM1Z490_mid, aOM1R490_mid, aOM1BC490_mid
-  real(rkind) cell_depth  !, bd_km1
+  real(rkind) :: a490_mid, aSw_mid, aChl490_mid, aCDOM490_mid, bbChl490_mid, bb490_mid
+  real(rkind) :: aOM1A490_mid, aOM1Z490_mid, aOM1R490_mid, aOM1BC490_mid
 ! Time variables  
   real(rkind), parameter :: OneD60     = 1.0/60.0  ! Convert 1/min to 1/sec
   real(rkind), parameter :: OneD3600     = 1.0/3600.0  ! Convert 1/min to 1/sec
@@ -46,8 +45,8 @@
  ! Organic Matter from fecal pellets      (mmol/m3)
    OM1Z(1:nz) = ff(1:nz,iOM1CZ) * C_cf
  ! Suspended Particulate Matter (SPM)    (mmol/m3) 
- ! There is 1.8% Organic Matter in SPM originating from the rivers.
-   OM1R(1:nz) = ff(1:nz,iOM1R) * C_cf / 0.018
+ ! CF_SPM is fraction of Organic Matter in SPM originating from the rivers, default=0.018
+   OM1R(1:nz) = ff(1:nz,iOM1R) * C_cf / CF_SPM 
  ! Organic Matter from boundary conditions(mmol/m3) 
    OM1BC(1:nz)  = ff(1:nz,iOM1BC) * C_cf
 !----------------------------------------------------------------
@@ -59,7 +58,6 @@
   jday = JDAY_IN_YEAR(iYr, iMon, iDay)
   !Solar zenith
   Z =  calc_solar_zenith(lat,lon,rhr,jday) !in rad
-
 
 ! First, convert CDOM(ppb) into CDOM, a490 (m-1)
 ! Once the CDOM (QSE ppb) is in the model domain, we advect and mix using the same 
@@ -112,7 +110,8 @@
         d_sfc(k)     = 0.5*dz(k)+ SUM(dz(1:k-1))
       enddo
 
-     if(debug.eq.2) then
+     if(debug.eq.4) then
+        write(6,*) "solar zenith",Z
         write(6,*) "Chla",Chla_tot
         write(6,*) "CDOM",CDOM_tot
         write(6,*) "OM1A",OM1A_tot
@@ -123,19 +122,19 @@
      endif
 
    do k=1,nz
-!Calculate absorption coefficients:
-      aSw_mid = aw490  !Sea water absorption at mid cell
-      aChl490_mid = astar490 * Chla_tot(k) / d_sfc(k)        !Chla absorption at mid cell
-      aCDOM490_mid = CDOM_tot(k) / d_sfc(k)        !CDOM absorption at mid cell
-      aOM1A490_mid = astarOMA * OM1A_tot(k) / d_sfc(k) ! absorption at mid cell
-      aOM1Z490_mid = astarOMZ * OM1Z_tot(k) / d_sfc(k) ! absorption at mid cell
-      aOM1R490_mid = astarOMR * OM1R_tot(k) / d_sfc(k) ! absorption at mid cell
-      aOM1BC490_mid = astarOMBC * OM1BC_tot(k) / d_sfc(k) ! absorption at mid cell
+      !Calculate absorption coefficients:
+      aSw_mid       = aw490                          !Sea water absorption at mid cell
+      aChl490_mid   = astar490 * Chla_tot(k) / d_sfc(k)   !Chla absorption at mid cell
+      aCDOM490_mid  = CDOM_tot(k) / d_sfc(k)              !CDOM absorption at mid cell
+      aOM1A490_mid  = astarOMA * OM1A_tot(k) / d_sfc(k)   !OM1A absorption at mid cell
+      aOM1Z490_mid  = astarOMZ * OM1Z_tot(k) / d_sfc(k)   !OM1Z absorption at mid cell
+      aOM1R490_mid  = astarOMR * OM1R_tot(k) / d_sfc(k)   !OM1R absorption at mid cell
+      aOM1BC490_mid = astarOMBC * OM1BC_tot(k) / d_sfc(k) !OM1BC absorption at mid cell
       a490_mid = aSw_mid + aChl490_mid + aCDOM490_mid + aOM1A490_mid + aOM1Z490_mid + aOM1R490_mid + aOM1BC490_mid
-!Calculate backscattering coefficients:
+      !Calculate backscattering coefficients:
       bbChl490_mid = 0.015 * (0.3*((Chla_tot(k) / d_sfc(k))**0.62)*(550./490.)) !Chla backscatter at mid cell
-      bb490_mid = bbChl490_mid !Only Chla backscatters for now
-      !if(debug.eq.1) write(6,*) k,a490_mid,bb490_mid,Chla_tot(k),d_sfc(k),OM1A_tot(k),OM1Z_tot(k)
+      bb490_mid    = bbChl490_mid !Only Chla backscatters for now
+      if(debug.eq.4) write(6,*) "k,a490, bb490_mid",k,a490_mid, bb490_mid
       call IOP_PARattenuation(a490_mid, bb490_mid, PARsurf, Z, d_sfc(k), PARdepth(k)) 
    enddo
 

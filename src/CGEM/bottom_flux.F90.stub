@@ -1,10 +1,11 @@
+!This needs to be rewritten as f(nf), as in surface fluxes
 subroutine cgem_flux(ff,ff_new,dT,nz,dz,T,S,Wind,pH,istep)
 
 !This is called after cgem_step, which returns ff_new
 !This modifies the surface and bottom cells of ff_new
 use cgem, only:Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,pCO2,iALK,iSi,iPO4, &
         & iSOC,iA,iNO3,iNH4,iNutEx,nospA,nf,fmin
-use MOD_UTILITIES
+use cgem_utils 
 use schism_glbl, only : rkind
 
 implicit none
@@ -15,7 +16,7 @@ real(rkind), intent(in) :: dz,T,S,Wind
 integer,intent(in) :: nz
 real(rkind) :: T_sfc, Sal_sfc, O2_sfc, Sc, Op_umole, rhow, Op, OsDOp
 real(rkind) :: Vtrans, alpha_O2, O2_atF,zs, DIC_sfc, CO2_atF
-real(rkind) :: SDay = 1./86400.d0
+real(rkind) :: SDay = 86400.d0
 !------------------------------------------------------------------
 !Bottom flux
   real(rkind) :: SOC, DICFlux,tau,O2Flux,NO3Flux,NH4Flux,PO4Flux,SiFlux,ALKFlux

@@ -1,24 +1,18 @@
 subroutine surface_flux(ff_new,dT,dz,T,S,Wind,pH)
 
 use cgem, only:Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,iALK,iSi,iPO4, &
-        & iA,nospA,nf,fmin,pCO2
-use MOD_UTILITIES
+            & iA,nospA,nf,fmin,pCO2
+use cgem_utils 
 use schism_glbl, only : rkind
 
 implicit none
 
-real(rkind), intent(in) :: dT
-real(rkind), intent(in) :: dz,T,S,Wind,pH
+real(rkind), intent(in) :: dT,dz,T,S,Wind,pH
 real(rkind), intent(inout) :: ff_new(nf)
-real(rkind) ::O2_sfc, Sc, Op_umole, rhow, Op, OsDOp
+real(rkind) :: O2_sfc, Sc, Op_umole, rhow, Op, OsDOp
 real(rkind) :: Vtrans, alpha_O2, O2_atF,DIC_sfc, CO2_atF
 real(rkind) :: SDay = 86400.d0
 !------------------------------------------------------------------
-!Bottom flux
-  real(rkind) :: SOC, DICFlux,tau,O2Flux,NO3Flux,NH4Flux,PO4Flux,SiFlux,ALKFlux
-
-  !for the variables not updated
-  !ff_new = ff
 
 if(Which_fluxes(iO2surf).eq.1) then
 !--------------------------------------------------------------
