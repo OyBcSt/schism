@@ -140,6 +140,7 @@
 ! Other variables 
   real(rkind)            :: PrimProd                ! Primary production (photosynthesis)
   real(rkind), dimension(nospA+nospZ) :: Tadj       ! Temperature adjustment factor
+  real(rkind) :: rKG1,rKG2
 !------------------------------------------------------------------    
 !timestep in days
   real(rkind) :: dTd
@@ -378,10 +379,11 @@
   ! ZegC should not be negative 
   do isz=1,nospZ
       if(ZegC(isz).lt.0.0) then
-          ZegC(isz) = 0.0
-          ZegN(isz) = 0.
-          ZegP(isz) = 0.
-          !write(6,*) "ZegC,ZegN,ZegP",ZegC(isz),ZegN(isz),ZegP(isz)
+          !ZegC(isz) = 0.0
+          !ZegN(isz) = 0.
+          !ZegP(isz) = 0.
+          write(6,*) "ZegC,ZegN,ZegP",ZegC(isz),ZegN(isz),ZegP(isz)
+          stop
       endif
   enddo
 
@@ -411,9 +413,11 @@
   ! Remineralization - reactions
   !---------------------------------------------------------------
   ! Instant Remineralization, if on bottom of shelf, redefine KG's
+  rKG1 = KG1
+  rKG2 = KG2
   if(is_bottom.and.which_fluxes(iInRemin).eq.1) then
-           KG1 = KGbot
-           KG2 = KGbot
+           rKG1 = KGbot
+           rKG2 = KGbot
   endif
   !------------------------------------------------------------
   ! Nitrification
@@ -436,6 +440,8 @@
   call vars(ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
   &    m_T, m_S, m_alk, m_dic, m_si, m_po4, patm, m_d_sfc, m_lat, 1, &
   &    'mol/m3', 'Tinsitu', 'm ', 'u74', 'l  ', 'pf ', 'Pzero  ')
+  if(debug.eq.3) write(6,*) "ph, mocsy",ph_calc, pco2_calc, fco2, co2, hco3, co3, OmegaA, OmegaC, BetaD_calc, rhoSW, p, tempis,&
+  &    m_T, m_S, m_alk, m_dic, m_si, m_po4, patm, m_d_sfc, m_lat
   pH = ph_calc(1)
 
   !------------------------------------------------------------
@@ -445,7 +451,7 @@
   sy1 = OM1NA/OM1PA
   sx2 = OM2CA/OM2PA
   sy2 = OM2NA/OM2PA
-  call reaction( OM1CA, OM2CA, O2, NO3, KG1, KG2, KO2, KstarO2, KNO3,     &
+  call reaction( OM1CA, OM2CA, O2, NO3, rKG1, rKG2, KO2, KstarO2, KNO3,     &
   &  sx1, sy1, sz, sx2, sy2, sz, T, RC )
   RC     = one_d_365 * RC  !Change units from /year to /day
   ROM1CA = RC(1)           ! units are /m3/day
@@ -470,7 +476,7 @@
   sy1 = OM1NZ/OM1PZ
   sx2 = OM2CZ/OM2PZ
   sy2 = OM2NZ/OM2PZ
-  call reaction( OM1CZ, OM2CZ, O2, NO3, KG1, KG2, KO2, KstarO2, KNO3,       &
+  call reaction( OM1CZ, OM2CZ, O2, NO3, rKG1, rKG2, KO2, KstarO2, KNO3,       &
   &  sx1, sy1, sz, sx2, sy2, sz, T, RC )
   RC     = one_d_365 * RC  !Change units from /year to /day
   ROM1CZ = RC(1)           ! units are /m3/day
@@ -631,21 +637,29 @@
   ff_new(iOM1CA) = OM1CA + (ROM1CA + OM1_CA)*dTd
   ff_new(iOM1NA) = OM1NA + (ROM1NA + OM1_NA)*dTd
   ff_new(iOM1PA) = OM1PA + (ROM1PA + OM1_PA)*dTd
+  if(debug.eq.2.and.is_bottom) write(6,*) "Bottom OM1A"
+  if(debug.eq.2) write(6,*) "f,fnew,rOM1A,OM1C",OM1CA,ff_new(iOM1CA),ROM1CA,OM1_CA
   !-----------------------------------------------
   !-OM2_A: (mmol-C/m3-- Dead Phytoplankton Dissolved)
   ff_new(iOM2CA) = OM2CA + (ROM2CA + OM2_CA)*dTd
   ff_new(iOM2NA) = OM2NA + (ROM2NA + OM2_NA)*dTd
   ff_new(iOM2PA) = OM2PA + (ROM2PA + OM2_PA)*dTd
+  if(debug.eq.2.and.is_bottom) write(6,*) "Bottom OM2A"
+  if(debug.eq.2) write(6,*) "f,fnew,rOM2A,OM2C",OM2CA,ff_new(iOM2CA),ROM2CA,OM2_CA
   !-----------------------------------------------
   !-OM1_Z:(mmol-C/m3--G particulate)
   ff_new(iOM1CZ) = OM1CZ + (ROM1CZ + OM1_CZ)*dTd
   ff_new(iOM1NZ) = OM1NZ + (ROM1NZ + OM1_NZ)*dTd
   ff_new(iOM1PZ) = OM1PZ + (ROM1PZ + OM1_PZ)*dTd
+  if(debug.eq.2.and.is_bottom) write(6,*) "Bottom OM1Z"
+  if(debug.eq.2) write(6,*) "f,fnew,rOM1Z,OM1Z",OM1CZ,ff_new(iOM1CZ),ROM1CZ,OM1_CZ
   !-----------------------------------------------
   !-OM2_Z:(mmol-C/m3--G dissolved)
   ff_new(iOM2CZ) = OM2CZ + (ROM2CZ + OM2_CZ)*dTd
   ff_new(iOM2NZ) = OM2NZ + (ROM2NZ + OM2_NZ)*dTd
   ff_new(iOM2PZ) = OM2PZ + (ROM2PZ + OM2_PZ)*dTd
+  if(debug.eq.2.and.is_bottom) write(6,*) "Bottom OM2Z"
+  if(debug.eq.2) write(6,*) "f,fnew,rOM2Z,OM2Z",OM2CZ,ff_new(iOM2CZ),ROM2CZ,OM2_CZ
   !---------------------------------------------------------------------
   !-OM1_R: (mmol-C/m3--SPM particulate)
   ff_new(iOM1R) = OM1R + ROM1_R*dTd
@@ -675,10 +689,10 @@
   ff_new(iQp(:)) = ff_new(iQp(:)) * ff_new(iA(:))
 
   if(is_surface.and.debug.eq.3) write(6,*) "before",ff_new(iO2),dz
-  if(is_surface.and.debug.eq.3) write(6,*) "before",ff_new
+  if(is_surface.and.debug.eq.3) write(6,*) "before",ff_new(iDIC)
   if(is_surface) call surface_flux(ff_new,dT,dz,T,S,Wind,pH)
   if(is_surface.and.debug.eq.3) write(6,*) "after",ff_new(iO2)
-  if(is_surface.and.debug.eq.3) write(6,*) "after",ff_new
+  if(is_surface.and.debug.eq.3) write(6,*) "after",ff_new(iDIC)
   return
   end subroutine cgem_step
 !---------------------------------------------------------------------- 

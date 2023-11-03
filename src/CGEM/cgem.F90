@@ -13,7 +13,7 @@ integer :: nospA
 integer :: nospZ
 
 !misc
-logical     :: sinkwcgem
+logical     :: sinkwcgem,cgemcoords
 integer     :: skipcgem,checkwindrad,debug
 real(rkind) :: eps
 !real(rkind) :: adjust_ws,adjust_fac
@@ -307,7 +307,7 @@ subroutine cgem_dim
   integer           :: istat,iunit
   character(len=1000) :: line
   !http://degenerateconic.com/namelist-error-checking.html
-  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,debug,sinkwcgem,cgemlat,cgemlon
+  namelist /nosp/ nospA,nospZ,skipcgem,checkwindrad,debug,sinkwcgem,cgemcoords,cgemlat,cgemlon
 
   open(action='read',file='cgem.nml',iostat=istat,newunit=iunit)
 

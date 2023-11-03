@@ -45,10 +45,6 @@ subroutine cgem_sink(ff,ff_new,ws,nz,dz,dT,i,istep,myrank)
     do k=1,nz
       write(6,'(*(g0,:,", "))') ff(k),ff_new(k),mass_in(k),mass_out(k),d_mass(k),dz(k)
     enddo
-  if(ABS(SUM(ff(1:nz)*dz(1:nz))-SUM(ff_new(1:nz)*dz(1:nz))).gt.1.e-8) then
-        !Prints a warning if mass is not conserved to at least single precision
-        write(6,'(*(g0,:,", "))') istep,SUM(ff_new(:)),SUM(ff),SUM(ff*dz),SUM(ff_new(:)*dz(:)),MINVAL(dz)
-  endif
  endif
 
 

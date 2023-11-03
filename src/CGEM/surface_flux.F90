@@ -1,18 +1,21 @@
 subroutine surface_flux(ff_new,dT,dz,T,S,Wind,pH)
 
 use cgem, only:Which_fluxes,iO2surf,iDICsurf,iO2,iDIC,iALK,iSi,iPO4, &
-            & iA,nospA,nf,fmin,pCO2
+            & iA,nospA,nf,fmin,pCO2,debug
 use cgem_utils 
 use schism_glbl, only : rkind
 
 implicit none
 
-real(rkind), intent(in) :: dT,dz,T,S,Wind,pH
+real(rkind), intent(in) :: dT,dz,T,S,Wind
+real, intent(in) :: pH
+real(rkind) :: pHrk
 real(rkind), intent(inout) :: ff_new(nf)
 real(rkind) :: O2_sfc, Sc, Op_umole, rhow, Op, OsDOp
 real(rkind) :: Vtrans, alpha_O2, O2_atF,DIC_sfc, CO2_atF
 real(rkind) :: SDay = 86400.d0
 !------------------------------------------------------------------
+if(debug.eq.3) write(6,*) "PH IN - SURFACE FLUX",pH
 
 if(Which_fluxes(iO2surf).eq.1) then
 !--------------------------------------------------------------
@@ -78,8 +81,10 @@ if(Which_fluxes(iDICsurf).eq.1) then
              ! Units of gas_exchange are mmol CO2 m-2 s-1 
              !----------------------------------------------------------
 !use mocsy instead but calculate to compare
-             CO2_atF = gas_exchange(T,S,DIC_sfc,dz,pH,pCO2)
+             pHrk = real(pH,rkind)
+             CO2_atF = gas_exchange(T,S,DIC_sfc,dz,pHrk,pCO2)
              ff_new(iDIC) = DMAX1(ff_new(iDIC) - CO2_atF/dz*dT,fmin(iDIC))
+        if(debug.eq.3) write(6,*) "DIC_sfc,CO2_atF,pH,pHrk,pCO2,T,S,dz",DIC_sfc,CO2_atF,pH,pHrk,pCO2,T,S,dz
 
 else
 

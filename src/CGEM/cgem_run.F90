@@ -7,9 +7,9 @@
 subroutine cgem_run(istep,myrank)
   use schism_glbl, only : rkind,nea,idry_e,irange_tr,flx_sf,flx_bt,bdy_frc,&
    & nvrt,kbe,dp,dpe,tr_el,dt,srad,elnode,i34,windx,windy,area,ze,wsett,   &
-   & xlon_el,ylat_el
+   & xlon,ylat
   use cgem, only: ws,skipcgem,checkwindrad,sinkwcgem,nf,debug,Which_rad,Which_wind,&
-                  PARfac,cgemlat,cgemlon
+                  PARfac,cgemcoords,cgemlat,cgemlon
   use grid, only: iYrS,START_SECONDS,km
 
   implicit none
@@ -18,12 +18,14 @@ subroutine cgem_run(istep,myrank)
   integer :: itmp1,itmp2,i,m,im,mm,k,nz
   integer :: TC_8
   logical :: is_surface,is_bottom
+  real(rkind),parameter :: pi=3.141592653589793_rkind
+  real(rkind),parameter :: one80=180._rkind
   real :: x
   real(rkind) :: ff(nf),ff_new(nf),ff_in(km,nf),ff_out(km,nf),dz(km),PAR(km)
   real(rkind) :: fs_in(km),fs_out(km)
   real(rkind) :: Rad, Wind, T, S, d_sfc
   real(rkind) :: lat,lon
-  real(rkind), parameter :: cv        = 2.77e14 ! multiplicative factor used
+  real(rkind), parameter :: cv        = 2.77e14_rkind ! multiplicative factor used
                                              ! to convert from watts/m2 
                                              ! to photons/cm2/sec
                                              ! Morel and Smith (1974)
@@ -40,19 +42,22 @@ subroutine cgem_run(istep,myrank)
 
   !Loop over elements
   do i=1,nea
-    !if(debug.eq.1.and.istep.eq.1) write(6,*) "i,idry_e(i),dpe(i),h_massconsv",i,idry_e(i),dpe(i),h_massconsv
     !Skip if element is dry or depth is below a set minimum
     if(idry_e(i)==1) cycle
 
-    !lat = ylat_el(i)
-    !lon = abs(xlon_el(i))
     !mocsy uses lat, get_solar uses lat/lon
-    lat = cgemlat
-    lon = cgemlon
+    if(cgemcoords) then
+      lon = cgemlon
+      lat = cgemlat
+    else
+    !mocsy/get_solar use degrees east, not negative
+      lon = abs(xlon(i)*One80/pi)
+      lat = ylat(i)*One80/pi
+    endif
 
     !Number of non-empty layers
     nz = nvrt - kbe(i)
-    if(debug.gt.0.and.istep.eq.1) write(6,*) "nvrt,kbe(i),kbe(i)+1",nvrt,kbe(i),kbe(i)+1,nz
+    if(debug.gt.0.and.istep.eq.1.and.i.eq.10) write(6,*) "nvrt,kbe(i),kbe(i)+1",nvrt,kbe(i),kbe(i)+1,nz
 
     !Set surface and bottom flux, and body forces to zero
     flx_sf(itmp1:itmp2,i)=0.d0
@@ -85,8 +90,7 @@ subroutine cgem_run(istep,myrank)
 
     !This will write Wind/Rad for every single timestep, don't run for long or
     !the resulting text file will be enormous.
-    if(checkwindrad.eq.1) write(6,*) "Wind,Rad,Minutes",Wind,Rad,istep,istep*int(dt)/60./60.
-    !if(checkwindrad.eq.1) write(6,*) "lat/lon",cgemlat,cgemlon!,ylat_el(i),xlon_el(i),xlon_gb(i),ylat_gb(i)
+    if(checkwindrad.eq.1) write(6,*) "Wind,Rad,Minutes,lat,lon",Wind,Rad,istep*int(dt)/60./60.,lat,lon
 
     !The option to skip cgem is for verifying initial and boundary conditions,
     !  sinking, and loading without cgem complicating the process 
