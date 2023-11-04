@@ -76,8 +76,7 @@ subroutine cgem_run(istep,myrank)
       ! shortwave radiation (hardcoded 4/30/14 to 0.43).
       ! Hardcoded to 0.47 on 2/11/16, Re: Tsubo and Walker, 2005
       ! PARfac is a multiplication factor for testing
-      !Rad = (0.47*Rad) * PARfac
-      Rad = Rad * PARfac
+      Rad = (0.47*Rad) * PARfac
     endif
 
     if(Which_wind.eq.1) then
