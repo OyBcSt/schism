@@ -1,6 +1,7 @@
 !L3 This is from the code that worked with uniform layers and tracked
 !L3   stoichiometry (sx1, sy1, etc.).  I needed to stop experimenting 
 !L3   and modify the code to work on a hybrid grid with new tracking of C, N, P.
+!L3 It uses code from ICM to take into volume into account, as we are using concentrations
 
 
 !==============================================================================
