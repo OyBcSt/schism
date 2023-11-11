@@ -297,8 +297,8 @@
   !---------------------------------------------------------
   !-A; Phytoplankton number density (cells/m3);
   !---------------------------------------------------------
-  ff_new(iA(:)) = A(:)        &
-  & + ( Agrow(:) - Aresp(:) - ZgrazA_tot(:) - Amort(:) )*dTd
+  ff_new(iA(:)) = DMAX1(A(:)        &
+  & + ( Agrow(:) - Aresp(:) - ZgrazA_tot(:) - Amort(:) )*dTd,fmin(iA(:)))
   if(debug.eq.2.and.inea.eq.10) write(6,*) "PAR",PAR
   if(debug.eq.2.and.inea.eq.10) write(6,*) "A,Agrow,Aresp,ZgrazA_tot,Amort,dTd",A,Agrow,Aresp,ZgrazA_tot,Amort,dTd
   !----------------------------------------------------------------------
@@ -406,7 +406,7 @@
   !-Z; Zooplankton number density (individuals/m3);
   !---------------------------------------------------------
   ff_new(iZ(:))  = DMAX1( Z(:)                         &
-  &      + (Zgrow(:) - Zresp(:) - Zmort(:))*dTd, 1.)
+  &      + (Zgrow(:) - Zresp(:) - Zmort(:))*dTd, fmin(iZ(:)))
   if(debug.eq.2.and.inea.eq.10) write(6,*) "Z,Zgrow,Zresp,Zmort",Z,Zgrow,Zresp,Zmort
 
   !-----------------------------------------------------------
